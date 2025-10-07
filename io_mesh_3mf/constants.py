@@ -1,5 +1,6 @@
 # Blender add-on to import and export 3MF files.
 # Copyright (C) 2020 Ghostkeeper
+# Copyright (C) 2025 Jack (modernization for Blender 4.2+)
 # This add-on is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -7,8 +8,6 @@
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program; if not, write to the Free
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-# <pep8 compliant>
 
 """
 This module defines some constants for 3MF's file structure.

@@ -4,11 +4,38 @@ This is a Blender add-on that allows importing and exporting 3MF files.
 
 3D Manufacturing Format files (.3mf) are a file format for triangular meshes intended to serve as exchange format for 3D printing applications. They can communicate not only the model, but also the intent and material of a 3D printing job from the CAD software to the CAM software (slicer). In this scenario, Blender serves as the CAD software. To that end, the aim of this add-on is to make Blender a more viable alternative as CAD software for additive manufacturing.
 
+## ⚠️ Modernization Notice (2025)
+
+**This fork is being actively modernized for Blender 4.2+**
+
+The original repository by Ghostkeeper has been inactive since 2023. The addon no longer functions in modern Blender versions (4.2+) due to API changes. This fork contains modernization work to restore compatibility.
+
+**Version Guide:**
+- **Blender 4.2+**: Use this modernized fork (work in progress)
+- **Blender 2.8-3.6**: Use the [original repository](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest)
+
+**Credits:**
+- **Original Author**: Ghostkeeper (2020-2022)
+- **Modernization**: Jack (2025)
+
+**Note to Original Author**: Should Ghostkeeper return to active development, all modernization work will be contributed back to the original repository. This fork exists solely to keep the addon functional for the community while maintaining the original vision and GPL v2+ license.
+
+### Current Modernization Status
+- [x] Fixed reload logic and imports
+- [ ] Updated for Blender 4.2+ API
+- [ ] Fixed material/shader system compatibility
+- [ ] Updated property annotation syntax
+- [ ] Added integration tests for Blender 4.2+
+- [ ] Verified round-trip import/export functionality
+
 Installation
 ----
-This add-on requires Blender 2.80 or newer. It is tested on version 2.80, 2.83, 2.93 3.0 and 3.3.
+**Modernized Version (Blender 4.2+):** This fork is currently under development. Once stable, installation instructions will be updated.
 
-To install this add-on, currently you need to tell Blender where to find a .zip archive with the add-on inside.
+**Original Version (Blender 2.80-3.6):** Use the [original repository releases](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest).
+
+### Installation Instructions (when ready)
+To install this add-on, you need to tell Blender where to find a .zip archive with the add-on inside.
 1. Download the latest release from the [releases page](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest). This is a .zip archive.
 2. In Blender, go to Edit -> Preferences and open the Add-ons tab on the left.
 3. Click on the Install... button at the top. Navigate to the .zip you downloaded.

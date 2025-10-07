@@ -1,5 +1,6 @@
 # Blender add-on to import and export 3MF files.
 # Copyright (C) 2020 Ghostkeeper
+# Copyright (C) 2025 Jack (modernization for Blender 4.2+)
 # This add-on is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -8,36 +9,50 @@
 # You should have received a copy of the GNU General Public License along with this program; if not, write to the Free
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-# <pep8 compliant>
 
 import base64  # To encode MustPreserve files in the Blender scene.
+import collections  # For namedtuple.
+import logging  # To debug and log progress.
+import os.path  # To take file paths relative to the selected directory.
+import re  # To find files in the archive based on the content types.
+import xml.etree.ElementTree  # To parse the 3dmodel.model file.
+import zipfile  # To read the 3MF files which are secretly zip archives.
+
 import bpy  # The Blender API.
 import bpy.ops  # To adjust the camera to fit models.
 import bpy.props  # To define metadata properties for the operator.
 import bpy.types  # This class is an operator in Blender.
 import bpy_extras.io_utils  # Helper functions to import meshes more easily.
 import bpy_extras.node_shader_utils  # Getting correct color spaces for materials.
-import logging  # To debug and log progress.
-import collections  # For namedtuple.
 import mathutils  # For the transformation matrices.
-import os.path  # To take file paths relative to the selected directory.
-import re  # To find files in the archive based on the content types.
-import xml.etree.ElementTree  # To parse the 3dmodel.model file.
-import zipfile  # To read the 3MF files which are secretly zip archives.
 
-from .annotations import Annotations, ContentType, Relationship  # To use annotations to decide on what to import.
-from .constants import *
-from .metadata import MetadataEntry, Metadata  # To store and serialize metadata.
-from .unit_conversions import blender_to_metre, threemf_to_metre  # To convert to Blender's units.
+from .annotations import (  # To use annotations to decide on what to import.
+    Annotations,
+    ContentType,
+    Relationship,
+)
+from .constants import (
+    RELS_MIMETYPE,
+    MODEL_MIMETYPE,
+    MODEL_NAMESPACES,
+    MODEL_DEFAULT_UNIT,
+    SUPPORTED_EXTENSIONS,
+    CONTENT_TYPES_LOCATION,
+    conflicting_mustpreserve_contents,
+)
+from .metadata import Metadata, MetadataEntry  # To store and serialize metadata.
+from .unit_conversions import (  # To convert to Blender's units.
+    blender_to_metre,
+    threemf_to_metre,
+)
+
+
 
 log = logging.getLogger(__name__)
 
-ResourceObject = collections.namedtuple("ResourceObject", [
-    "vertices",
-    "triangles",
-    "materials",
-    "components",
-    "metadata"])
+ResourceObject = collections.namedtuple(
+    "ResourceObject", ["vertices", "triangles", "materials", "components", "metadata"]
+)
 Component = collections.namedtuple("Component", ["resource_object", "transformation"])
 ResourceMaterial = collections.namedtuple("ResourceMaterial", ["name", "color"])
 
@@ -51,29 +66,18 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     bl_idname = "import_mesh.threemf"
     bl_label = "Import 3MF"
     bl_description = "Load a 3MF scene"
-    bl_options = {'UNDO'}
+    bl_options = {"UNDO"}
     filename_ext = ".3mf"
 
     # Options for the user.
-    filter_glob: bpy.props.StringProperty(default="*.3mf", options={'HIDDEN'})
-    files: bpy.props.CollectionProperty(name="File Path", type=bpy.types.OperatorFileListElement)
-    directory: bpy.props.StringProperty(subtype='DIR_PATH')
-    global_scale: bpy.props.FloatProperty(name="Scale", default=1.0, soft_min=0.001, soft_max=1000.0, min=1e-6, max=1e6)
-
-    def __init__(self):
-        """
-        Initializes the importer with empty fields.
-        """
-        super().__init__()
-        self.resource_objects = {}  # Dictionary mapping resource IDs to ResourceObjects.
-
-        # Dictionary mapping resource IDs to dictionaries mapping indexes to ResourceMaterial objects.
-        self.resource_materials = {}
-
-        # Which of our resource materials already exists in the Blender scene as a Blender material.
-        self.resource_to_material = {}
-
-        self.num_loaded = 0
+    filter_glob: bpy.props.StringProperty(default="*.3mf", options={"HIDDEN"})
+    files: bpy.props.CollectionProperty(
+        name="File Path", type=bpy.types.OperatorFileListElement
+    )
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+    global_scale: bpy.props.FloatProperty(
+        name="Scale", default=1.0, soft_min=0.001, soft_max=1000.0, min=1e-6, max=1e6
+    )
 
     def execute(self, context):
         """
@@ -103,12 +107,16 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             paths.append(self.filepath)
 
         if bpy.ops.object.mode_set.poll():
-            bpy.ops.object.mode_set(mode='OBJECT')  # Switch to object mode to view the new file.
+            bpy.ops.object.mode_set(
+                mode="OBJECT"
+            )  # Switch to object mode to view the new file.
         if bpy.ops.object.select_all.poll():
-            bpy.ops.object.select_all(action='DESELECT')  # Deselect other files.
+            bpy.ops.object.select_all(action="DESELECT")  # Deselect other files.
 
         for path in paths:
-            files_by_content_type = self.read_archive(path)  # Get the files from the archive.
+            files_by_content_type = self.read_archive(
+                path
+            )  # Get the files from the archive.
 
             # File metadata.
             for rels_file in files_by_content_type.get(RELS_MIMETYPE, []):
@@ -146,25 +154,31 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         # Zoom the camera to view the imported objects.
         for area in bpy.context.screen.areas:
-            if area.type == 'VIEW_3D':
+            if area.type == "VIEW_3D":
                 for region in area.regions:
-                    if region.type == 'WINDOW':
+                    if region.type == "WINDOW":
                         try:
                             # Since Blender 3.2:
                             context = bpy.context.copy()
-                            context['area'] = area
-                            context['region'] = region
-                            context['edit_object'] = bpy.context.edit_object
+                            context["area"] = area
+                            context["region"] = region
+                            context["edit_object"] = bpy.context.edit_object
                             with bpy.context.temp_override(**context):
                                 bpy.ops.view3d.view_selected()
-                        except AttributeError:  # temp_override doesn't exist before Blender 3.2.
+                        except (
+                            AttributeError
+                        ):  # temp_override doesn't exist before Blender 3.2.
                             # Before Blender 3.2:
-                            override = {'area': area, 'region': region, 'edit_object': bpy.context.edit_object}
+                            override = {
+                                "area": area,
+                                "region": region,
+                                "edit_object": bpy.context.edit_object,
+                            }
                             bpy.ops.view3d.view_selected(override)
 
         log.info(f"Imported {self.num_loaded} objects from 3MF files.")
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
     # The rest of the functions are in order of when they are called.
 
@@ -209,7 +223,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         :return: A list of tuples, in order of importance, where the first element describes a regex of paths that
         match, and the second element is the MIME type string of the content type.
         """
-        namespaces = {"ct": "http://schemas.openxmlformats.org/package/2006/content-types"}
+        namespaces = {
+            "ct": "http://schemas.openxmlformats.org/package/2006/content-types"
+        }
         result = []
 
         try:
@@ -219,23 +235,40 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 except xml.etree.ElementTree.ParseError as e:
                     log.warning(
                         f"{CONTENT_TYPES_LOCATION} has malformed XML"
-                        f"(position {e.position[0]}:{e.position[1]}).")
+                        f"(position {e.position[0]}:{e.position[1]})."
+                    )
                     root = None
 
                 if root is not None:
                     # Overrides are more important than defaults, so put those in front.
                     for override_node in root.iterfind("ct:Override", namespaces):
-                        if "PartName" not in override_node.attrib or "ContentType" not in override_node.attrib:
-                            log.warning("[Content_Types].xml malformed: Override node without path or MIME type.")
+                        if (
+                            "PartName" not in override_node.attrib
+                            or "ContentType" not in override_node.attrib
+                        ):
+                            log.warning(
+                                "[Content_Types].xml malformed: Override node without path or MIME type."
+                            )
                             continue  # Ignore the broken one.
-                        match_regex = re.compile(re.escape(override_node.attrib["PartName"]))
-                        result.append((match_regex, override_node.attrib["ContentType"]))
+                        match_regex = re.compile(
+                            re.escape(override_node.attrib["PartName"])
+                        )
+                        result.append(
+                            (match_regex, override_node.attrib["ContentType"])
+                        )
 
                     for default_node in root.iterfind("ct:Default", namespaces):
-                        if "Extension" not in default_node.attrib or "ContentType" not in default_node.attrib:
-                            log.warning("[Content_Types].xml malformed: Default node without extension or MIME type.")
+                        if (
+                            "Extension" not in default_node.attrib
+                            or "ContentType" not in default_node.attrib
+                        ):
+                            log.warning(
+                                "[Content_Types].xml malformed: Default node without extension or MIME type."
+                            )
                             continue  # Ignore the broken one.
-                        match_regex = re.compile(r".*\." + re.escape(default_node.attrib["Extension"]))
+                        match_regex = re.compile(
+                            r".*\." + re.escape(default_node.attrib["Extension"])
+                        )
                         result.append((match_regex, default_node.attrib["ContentType"]))
         except KeyError:  # ZipFile reports that the content types file doesn't exist.
             log.warning(f"{CONTENT_TYPES_LOCATION} file missing!")
@@ -289,17 +322,22 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         sort that out.
         :param annotations: Collection of annotations gathered so far.
         """
-        preserved_files = set()  # Find all files which must be preserved according to the annotations.
+        preserved_files = (
+            set()
+        )  # Find all files which must be preserved according to the annotations.
         for target, its_annotations in annotations.annotations.items():
             for annotation in its_annotations:
                 if type(annotation) is Relationship:
                     if annotation.namespace in {
                         "http://schemas.openxmlformats.org/package/2006/relationships/mustpreserve",
-                        "http://schemas.microsoft.com/3dmanufacturing/2013/01/printticket"
+                        "http://schemas.microsoft.com/3dmanufacturing/2013/01/printticket",
                     }:
                         preserved_files.add(target)
                 elif type(annotation) is ContentType:
-                    if annotation.mime_type == "application/vnd.ms-printing.printticket+xml":
+                    if (
+                        annotation.mime_type
+                        == "application/vnd.ms-printing.printticket+xml"
+                    ):
                         preserved_files.add(target)
 
         for files in files_by_content_type.values():
@@ -307,19 +345,24 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 if file.name in preserved_files:
                     filename = ".3mf_preserved/" + file.name
                     if filename in bpy.data.texts:
-                        if bpy.data.texts[filename].as_string() == conflicting_mustpreserve_contents:
+                        if (
+                            bpy.data.texts[filename].as_string()
+                            == conflicting_mustpreserve_contents
+                        ):
                             # This file was previously already in conflict. The new file will always be in conflict with
                             # one of the previous files.
                             continue
                     # Encode as Base85 so that the file can be saved in Blender's Text objects.
-                    file_contents = base64.b85encode(file.read()).decode('UTF-8')
+                    file_contents = base64.b85encode(file.read()).decode("UTF-8")
                     if filename in bpy.data.texts:
                         if bpy.data.texts[filename].as_string() == file_contents:
                             # File contents are EXACTLY the same, so the file is not in conflict.
                             continue  # But we also don't need to re-add the same file then.
                         else:  # Same file exists with different contents, so they are in conflict.
                             bpy.data.texts[filename].clear()
-                            bpy.data.texts[filename].write(conflicting_mustpreserve_contents)
+                            bpy.data.texts[filename].write(
+                                conflicting_mustpreserve_contents
+                            )
                             continue
                     else:  # File doesn't exist yet.
                         handle = bpy.data.texts.new(filename)
@@ -348,7 +391,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         scale = self.global_scale
 
         if context.scene.unit_settings.scale_length != 0:
-            scale /= context.scene.unit_settings.scale_length  # Apply the global scale of the units in Blender.
+            scale /= (
+                context.scene.unit_settings.scale_length
+            )  # Apply the global scale of the units in Blender.
 
         threemf_unit = root.attrib.get("unit", MODEL_DEFAULT_UNIT)
         blender_unit = context.scene.unit_settings.length_unit
@@ -384,7 +429,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             value = metadata_node.text
 
             # Always store all metadata so that they are preserved.
-            metadata[name] = MetadataEntry(name=name, preserve=preserve, datatype=datatype, value=value)
+            metadata[name] = MetadataEntry(
+                name=name, preserve=preserve, datatype=datatype, value=value
+            )
 
         return metadata
 
@@ -395,7 +442,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         The materials will be stored in `self.resource_materials` until it gets used to build the items.
         :param root: The root of an XML document that may contain materials.
         """
-        for basematerials_item in root.iterfind("./3mf:resources/3mf:basematerials", MODEL_NAMESPACES):
+        for basematerials_item in root.iterfind(
+            "./3mf:resources/3mf:basematerials", MODEL_NAMESPACES
+        ):
             try:
                 material_id = basematerials_item.attrib["id"]
             except KeyError:
@@ -410,12 +459,16 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             index = 0
 
             # "Base" must be the stupidest name for a material resource. Oh well.
-            for base_item in basematerials_item.iterfind("./3mf:base", MODEL_NAMESPACES):
+            for base_item in basematerials_item.iterfind(
+                "./3mf:base", MODEL_NAMESPACES
+            ):
                 name = base_item.attrib.get("name", "3MF Material")
                 color = base_item.attrib.get("displaycolor")
                 if color is not None:
                     # Parse the color. It's a hexadecimal number indicating RGB or RGBA.
-                    color = color.lstrip("#")  # Should start with a #. We'll be lenient if it's not.
+                    color = color.lstrip(
+                        "#"
+                    )  # Should start with a #. We'll be lenient if it's not.
                     try:
                         color_int = int(color, 16)
                         # Separate out up to four bytes from this int, from right to left.
@@ -424,19 +477,35 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         b3 = ((color_int & 0x00FF0000) >> 16) / 255
                         b4 = ((color_int & 0xFF000000) >> 24) / 255
                         if len(color) == 6:  # RGB format.
-                            color = (b3, b2, b1, 1.0)  # b1, b2 and b3 are B, G, R respectively. b4 is always 0.
+                            color = (
+                                b3,
+                                b2,
+                                b1,
+                                1.0,
+                            )  # b1, b2 and b3 are B, G, R respectively. b4 is always 0.
                         else:  # RGBA format, or invalid.
-                            color = (b4, b3, b2, b1)  # b1, b2, b3 and b4 are A, B, G, R respectively.
+                            color = (
+                                b4,
+                                b3,
+                                b2,
+                                b1,
+                            )  # b1, b2, b3 and b4 are A, B, G, R respectively.
                     except ValueError:
-                        log.warning(f"Invalid color for material {name} of resource {material_id}: {color}")
+                        log.warning(
+                            f"Invalid color for material {name} of resource {material_id}: {color}"
+                        )
                         color = None  # Don't add a color for this material.
 
                 # Input is valid. Create a resource.
-                self.resource_materials[material_id][index] = ResourceMaterial(name=name, color=color)
+                self.resource_materials[material_id][index] = ResourceMaterial(
+                    name=name, color=color
+                )
                 index += 1
 
             if len(self.resource_materials[material_id]) == 0:
-                del self.resource_materials[material_id]  # Don't leave empty material sets hanging.
+                del self.resource_materials[
+                    material_id
+                ]  # Don't leave empty material sets hanging.
 
     def read_objects(self, root):
         """
@@ -445,7 +514,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         This stores them in the resource_objects field.
         :param root: The root node of a 3dmodel.model XML file.
         """
-        for object_node in root.iterfind("./3mf:resources/3mf:object", MODEL_NAMESPACES):
+        for object_node in root.iterfind(
+            "./3mf:resources/3mf:object", MODEL_NAMESPACES
+        ):
             try:
                 objectid = object_node.attrib["id"]
             except KeyError:
@@ -453,7 +524,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 continue  # ID is required, otherwise the build can't refer to it.
 
             pid = object_node.attrib.get("pid")  # Material ID.
-            pindex = object_node.attrib.get("pindex")  # Index within a collection of materials.
+            pindex = object_node.attrib.get(
+                "pindex"
+            )  # Index within a collection of materials.
             material = None
             if pid is not None and pindex is not None:
                 try:
@@ -462,15 +535,20 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 except KeyError:
                     log.warning(
                         f"Object with ID {objectid} refers to material collection {pid} with index {pindex}"
-                        f" which doesn't exist.")
+                        f" which doesn't exist."
+                    )
                 except ValueError:
-                    log.warning(f"Object with ID {objectid} specifies material index {pindex}, which is not integer.")
+                    log.warning(
+                        f"Object with ID {objectid} specifies material index {pindex}, which is not integer."
+                    )
 
             vertices = self.read_vertices(object_node)
             triangles, materials = self.read_triangles(object_node, material, pid)
             components = self.read_components(object_node)
             metadata = Metadata()
-            for metadata_node in object_node.iterfind("./3mf:metadatagroup", MODEL_NAMESPACES):
+            for metadata_node in object_node.iterfind(
+                "./3mf:metadatagroup", MODEL_NAMESPACES
+            ):
                 metadata = self.read_metadata(metadata_node, metadata)
             if "partnumber" in object_node.attrib:
                 # Blender has no way to ensure that custom properties get preserved if a mesh is split up, but for most
@@ -479,19 +557,22 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     name="3mf:partnumber",
                     preserve=True,
                     datatype="xs:string",
-                    value=object_node.attrib["partnumber"])
+                    value=object_node.attrib["partnumber"],
+                )
             metadata["3mf:object_type"] = MetadataEntry(
                 name="3mf:object_type",
                 preserve=True,
                 datatype="xs:string",
-                value=object_node.attrib.get("type", "model"))
+                value=object_node.attrib.get("type", "model"),
+            )
 
             self.resource_objects[objectid] = ResourceObject(
                 vertices=vertices,
                 triangles=triangles,
                 materials=materials,
                 components=components,
-                metadata=metadata)
+                metadata=metadata,
+            )
 
     def read_vertices(self, object_node):
         """
@@ -503,7 +584,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         :return: List of vertices in that object. Each vertex is a tuple of 3 floats for X, Y and Z.
         """
         result = []
-        for vertex in object_node.iterfind("./3mf:mesh/3mf:vertices/3mf:vertex", MODEL_NAMESPACES):
+        for vertex in object_node.iterfind(
+            "./3mf:mesh/3mf:vertices/3mf:vertex", MODEL_NAMESPACES
+        ):
             attrib = vertex.attrib
             try:
                 x = float(attrib.get("x", 0))
@@ -539,7 +622,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         """
         vertices = []
         materials = []
-        for triangle in object_node.iterfind("./3mf:mesh/3mf:triangles/3mf:triangle", MODEL_NAMESPACES):
+        for triangle in object_node.iterfind(
+            "./3mf:mesh/3mf:triangles/3mf:triangle", MODEL_NAMESPACES
+        ):
             attrib = triangle.attrib
             try:
                 v1 = int(attrib["v1"])
@@ -584,12 +669,16 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         :return: List of components in this object node.
         """
         result = []
-        for component_node in object_node.iterfind("./3mf:components/3mf:component", MODEL_NAMESPACES):
+        for component_node in object_node.iterfind(
+            "./3mf:components/3mf:component", MODEL_NAMESPACES
+        ):
             try:
                 objectid = component_node.attrib["objectid"]
             except KeyError:  # ID is required.
                 continue  # Ignore this invalid component.
-            transform = self.parse_transformation(component_node.attrib.get("transform", ""))
+            transform = self.parse_transformation(
+                component_node.attrib.get("transform", "")
+            )
 
             result.append(Component(resource_object=objectid, transformation=transform))
         return result
@@ -615,7 +704,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         """
         components = transformation_str.split(" ")
         result = mathutils.Matrix.Identity(4)
-        if transformation_str == "":  # Early-out if transformation is missing. This is not malformed.
+        if (
+            transformation_str == ""
+        ):  # Early-out if transformation is missing. This is not malformed.
             return result
         row = -1
         col = 0
@@ -625,7 +716,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 col += 1
                 row = 0
                 if col > 3:
-                    log.warning(f"Transformation matrix contains too many components: {transformation_str}")
+                    log.warning(
+                        f"Transformation matrix contains too many components: {transformation_str}"
+                    )
                     break  # Too many components. Ignore the rest.
             try:
                 component_float = float(component)
@@ -649,26 +742,40 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             try:
                 objectid = build_item.attrib["objectid"]
                 resource_object = self.resource_objects[objectid]
-            except KeyError:  # ID is required, and it must be in the available resource_objects.
+            except (
+                KeyError
+            ):  # ID is required, and it must be in the available resource_objects.
                 log.warning("Encountered build item without object ID.")
                 continue  # Ignore this invalid item.
 
             metadata = Metadata()
-            for metadata_node in build_item.iterfind("./3mf:metadatagroup", MODEL_NAMESPACES):
+            for metadata_node in build_item.iterfind(
+                "./3mf:metadatagroup", MODEL_NAMESPACES
+            ):
                 metadata = self.read_metadata(metadata_node, metadata)
             if "partnumber" in build_item.attrib:
                 metadata["3mf:partnumber"] = MetadataEntry(
                     name="3mf:partnumber",
                     preserve=True,
                     datatype="xs:string",
-                    value=build_item.attrib["partnumber"])
+                    value=build_item.attrib["partnumber"],
+                )
 
             transform = mathutils.Matrix.Scale(scale_unit, 4)
-            transform @= self.parse_transformation(build_item.attrib.get("transform", ""))
+            transform @= self.parse_transformation(
+                build_item.attrib.get("transform", "")
+            )
 
             self.build_object(resource_object, transform, metadata, [objectid])
 
-    def build_object(self, resource_object, transformation, metadata, objectid_stack_trace, parent=None):
+    def build_object(
+        self,
+        resource_object,
+        transformation,
+        metadata,
+        objectid_stack_trace,
+        parent=None,
+    ):
         """
         Converts a resource object into a Blender object.
 
@@ -694,7 +801,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
             # Mapping resource materials to indices in the list of materials for this specific mesh.
             materials_to_index = {}
-            for triangle_index, triangle_material in enumerate(resource_object.materials):
+            for triangle_index, triangle_material in enumerate(
+                resource_object.materials
+            ):
                 if triangle_material is None:
                     continue
 
@@ -702,7 +811,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 if triangle_material not in self.resource_to_material:
                     material = bpy.data.materials.new(triangle_material.name)
                     material.use_nodes = True
-                    principled = bpy_extras.node_shader_utils.PrincipledBSDFWrapper(material, is_readonly=False)
+                    principled = bpy_extras.node_shader_utils.PrincipledBSDFWrapper(
+                        material, is_readonly=False
+                    )
                     principled.base_color = triangle_material.color[:3]
                     principled.alpha = triangle_material.color[3]
                     self.resource_to_material[triangle_material] = material
@@ -713,13 +824,17 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 if triangle_material not in materials_to_index:
                     new_index = len(mesh.materials.items())
                     if new_index > 32767:
-                        log.warning("Blender doesn't support more than 32768 different materials per mesh.")
+                        log.warning(
+                            "Blender doesn't support more than 32768 different materials per mesh."
+                        )
                         continue
                     mesh.materials.append(material)
                     materials_to_index[triangle_material] = new_index
 
                 # Assign the material to the correct triangle.
-                mesh.polygons[triangle_index].material_index = materials_to_index[triangle_material]
+                mesh.polygons[triangle_index].material_index = materials_to_index[
+                    triangle_material
+                ]
 
         # Create an object.
         blender_object = bpy.data.objects.new("3MF Object", mesh)
@@ -731,8 +846,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         bpy.context.view_layer.objects.active = blender_object
         blender_object.select_set(True)
         metadata.store(blender_object)
-        if "3mf:object_type" in resource_object.metadata\
-                and resource_object.metadata["3mf:object_type"].value in {"solidsupport", "support"}:
+        if "3mf:object_type" in resource_object.metadata and resource_object.metadata[
+            "3mf:object_type"
+        ].value in {"solidsupport", "support"}:
             # Don't render support meshes.
             blender_object.hide_render = True
 
@@ -740,14 +856,26 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         for component in resource_object.components:
             if component.resource_object in objectid_stack_trace:
                 # These object IDs refer to each other in a loop. Don't go in there!
-                log.warning(f"Recursive components in object ID: {component.resource_object}")
+                log.warning(
+                    f"Recursive components in object ID: {component.resource_object}"
+                )
                 continue
             try:
                 child_object = self.resource_objects[component.resource_object]
             except KeyError:  # Invalid resource ID. Doesn't exist!
-                log.warning(f"Build item with unknown resource ID: {component.resource_object}")
+                log.warning(
+                    f"Build item with unknown resource ID: {component.resource_object}"
+                )
                 continue
-            transform = transformation @ component.transformation  # Apply the child's transformation and pass it on.
+            transform = (
+                transformation @ component.transformation
+            )  # Apply the child's transformation and pass it on.
             objectid_stack_trace.append(component.resource_object)
-            self.build_object(child_object, transform, metadata, objectid_stack_trace, parent=blender_object)
+            self.build_object(
+                child_object,
+                transform,
+                metadata,
+                objectid_stack_trace,
+                parent=blender_object,
+            )
             objectid_stack_trace.pop()

@@ -1,5 +1,6 @@
 # Blender add-on to import and export 3MF files.
 # Copyright (C) 2020 Ghostkeeper
+# Copyright (C) 2025 Jack (modernization for Blender 4.2+)
 # This add-on is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -8,9 +9,6 @@
 # You should have received a copy of the GNU General Public License along with this program; if not, write to the Free
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-# <pep8 compliant>
-
-import bpy  # To store the annotations long-term in the Blender context.
 import collections  # Namedtuple data structure for annotations, and Counter to write optimized content types.
 import json  # To serialize the data for long-term storage in the Blender scene.
 import logging  # Reporting parsing errors.
@@ -18,7 +16,20 @@ import os.path  # To parse target paths in relationships.
 import urllib.parse  # To parse relative target paths in relationships.
 import xml.etree.ElementTree  # To parse the relationships files.
 
-from .constants import *
+import bpy  # To store the annotations long-term in the Blender context.
+
+from .constants import (
+    RELS_FOLDER,
+    RELS_RELATIONSHIP_FIND,
+    RELS_NAMESPACES,
+    MODEL_REL,
+    RELS_MIMETYPE,
+    MODEL_MIMETYPE,
+    RELS_NAMESPACE,
+    MODEL_LOCATION,
+    CONTENT_TYPES_NAMESPACE,
+    CONTENT_TYPES_LOCATION,
+)
 
 
 # These are the different types of annotations we can store.
@@ -28,7 +39,9 @@ ContentType = collections.namedtuple("ContentType", ["mime_type"])
 # Flag object to denote that different 3MF archives give different content types to the same file in the archive.
 ConflictingContentType = object()
 
-ANNOTATION_FILE = ".3mf_annotations"  # File name to use to store the annotations in the Blender data.
+ANNOTATION_FILE = (
+    ".3mf_annotations"  # File name to use to store the annotations in the Blender data.
+)
 
 
 class Annotations:
@@ -76,7 +89,8 @@ class Annotations:
             root = xml.etree.ElementTree.ElementTree(file=rels_file)
         except xml.etree.ElementTree.ParseError as e:
             logging.warning(
-                f"Relationship file {rels_file.name} has malformed XML (position {e.position[0]}:{e.position[1]}).")
+                f"Relationship file {rels_file.name} has malformed XML (position {e.position[0]}:{e.position[1]})."
+            )
             return  # Skip this file.
 
         for relationship_node in root.iterfind(RELS_RELATIONSHIP_FIND, RELS_NAMESPACES):
@@ -86,7 +100,9 @@ class Annotations:
             except KeyError as e:
                 logging.warning(f"Relationship missing attribute: {str(e)}")
                 continue  # Skip this relationship.
-            if namespace == MODEL_REL:  # Don't store relationships that we will write ourselves.
+            if (
+                namespace == MODEL_REL
+            ):  # Don't store relationships that we will write ourselves.
                 continue
 
             # Evaluate any relative URIs based on the path to this .rels file in the archive.
@@ -101,7 +117,9 @@ class Annotations:
                 self.annotations[target] = set()
 
             # Add to the annotations as a relationship (since it's a set, don't create duplicates).
-            self.annotations[target].add(Relationship(namespace=namespace, source=base_path))
+            self.annotations[target].add(
+                Relationship(namespace=namespace, source=base_path)
+            )
 
     def add_content_types(self, files_by_content_type):
         """
@@ -126,12 +144,21 @@ class Annotations:
                 if ConflictingContentType in self.annotations[filename]:
                     # Content type was already conflicting through multiple previous files. It'll stay in conflict.
                     continue
-                content_type_annotations = list(filter(lambda annotation: type(annotation) is ContentType,
-                                                       self.annotations[filename]))
-                if any(content_type_annotations) and content_type_annotations[0].mime_type != content_type:
+                content_type_annotations = list(
+                    filter(
+                        lambda annotation: type(annotation) is ContentType,
+                        self.annotations[filename],
+                    )
+                )
+                if (
+                    any(content_type_annotations)
+                    and content_type_annotations[0].mime_type != content_type
+                ):
                     # There was already a content type and it is different from this one.
                     # This file now has conflicting content types!
-                    logging.warning(f"Found conflicting content types for file: {filename}")
+                    logging.warning(
+                        f"Found conflicting content types for file: {filename}"
+                    )
                     for annotation in content_type_annotations:
                         self.annotations[filename].remove(annotation)
                     self.annotations[filename].add(ConflictingContentType)
@@ -163,33 +190,50 @@ class Annotations:
                 rels_by_source[annotation.source].add((target, annotation.namespace))
 
         for source, annotations in rels_by_source.items():
-            if source == "/":  # Writing to the archive root. Don't want to start zipfile paths with a slash.
+            if (
+                source == "/"
+            ):  # Writing to the archive root. Don't want to start zipfile paths with a slash.
                 source = ""
             # Create an XML document containing all relationships for this source.
             root = xml.etree.ElementTree.Element(f"{{{RELS_NAMESPACE}}}Relationships")
             for target, namespace in annotations:
-                xml.etree.ElementTree.SubElement(root, f"{{{RELS_NAMESPACE}}}Relationship", attrib={
-                    f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                    f"{{{RELS_NAMESPACE}}}Target": "/" + target,
-                    f"{{{RELS_NAMESPACE}}}Type": namespace
-                })
+                xml.etree.ElementTree.SubElement(
+                    root,
+                    f"{{{RELS_NAMESPACE}}}Relationship",
+                    attrib={
+                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
+                        f"{{{RELS_NAMESPACE}}}Target": "/" + target,
+                        f"{{{RELS_NAMESPACE}}}Type": namespace,
+                    },
+                )
                 current_id += 1
 
             # Write relationships for files that we create.
             if source == "":
-                xml.etree.ElementTree.SubElement(root, f"{{{RELS_NAMESPACE}}}Relationship", attrib={
-                    f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                    f"{{{RELS_NAMESPACE}}}Target": "/" + MODEL_LOCATION,
-                    f"{{{RELS_NAMESPACE}}}Type": MODEL_REL
-                })
+                xml.etree.ElementTree.SubElement(
+                    root,
+                    f"{{{RELS_NAMESPACE}}}Relationship",
+                    attrib={
+                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
+                        f"{{{RELS_NAMESPACE}}}Target": "/" + MODEL_LOCATION,
+                        f"{{{RELS_NAMESPACE}}}Type": MODEL_REL,
+                    },
+                )
                 current_id += 1
 
             document = xml.etree.ElementTree.ElementTree(root)
 
             # Write that XML document to a file.
-            rels_file = source + RELS_FOLDER + "/.rels"  # _rels folder in the "source" folder.
-            with archive.open(rels_file, 'w') as f:
-                document.write(f, xml_declaration=True, encoding='UTF-8', default_namespace=RELS_NAMESPACE)
+            rels_file = (
+                source + RELS_FOLDER + "/.rels"
+            )  # _rels folder in the "source" folder.
+            with archive.open(rels_file, "w") as f:
+                document.write(
+                    f,
+                    xml_declaration=True,
+                    encoding="UTF-8",
+                    default_namespace=RELS_NAMESPACE,
+                )
 
     def write_content_types(self, archive):
         """
@@ -226,10 +270,16 @@ class Annotations:
         for extension, mime_type in most_common.items():
             if not extension:  # Skip files without extension.
                 continue
-            xml.etree.ElementTree.SubElement(root, f"{{{CONTENT_TYPES_NAMESPACE}}}Default", attrib={
-                f"{{{CONTENT_TYPES_NAMESPACE}}}Extension": extension[1:],  # Don't include the period.
-                f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": mime_type
-            })
+            xml.etree.ElementTree.SubElement(
+                root,
+                f"{{{CONTENT_TYPES_NAMESPACE}}}Default",
+                attrib={
+                    f"{{{CONTENT_TYPES_NAMESPACE}}}Extension": extension[
+                        1:
+                    ],  # Don't include the period.
+                    f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": mime_type,
+                },
+            )
 
         # Then write the overrides for files that don't have the same content type as most of their exceptions.
         for target, annotations in self.annotations.items():
@@ -239,15 +289,24 @@ class Annotations:
                 extension = os.path.splitext(target)[1]
                 if not extension or annotation.mime_type != most_common[extension]:
                     # This is an exceptional case that should be stored as an override.
-                    xml.etree.ElementTree.SubElement(root, f"{{{CONTENT_TYPES_NAMESPACE}}}Override", attrib={
-                        f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": "/" + target,
-                        f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": annotation.mime_type
-                    })
+                    xml.etree.ElementTree.SubElement(
+                        root,
+                        f"{{{CONTENT_TYPES_NAMESPACE}}}Override",
+                        attrib={
+                            f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": "/" + target,
+                            f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": annotation.mime_type,
+                        },
+                    )
 
         # Output all that to the [Content_Types].xml file.
         document = xml.etree.ElementTree.ElementTree(root)
-        with archive.open(CONTENT_TYPES_LOCATION, 'w') as f:
-            document.write(f, xml_declaration=True, encoding='UTF-8', default_namespace=CONTENT_TYPES_NAMESPACE)
+        with archive.open(CONTENT_TYPES_LOCATION, "w") as f:
+            document.write(
+                f,
+                xml_declaration=True,
+                encoding="UTF-8",
+                default_namespace=CONTENT_TYPES_NAMESPACE,
+            )
 
     def store(self):
         """
@@ -262,20 +321,24 @@ class Annotations:
             serialized_annotations = []
             for annotation in annotations:
                 if type(annotation) is Relationship:
-                    serialized_annotations.append({
-                        "annotation": 'relationship',
-                        "namespace": annotation.namespace,
-                        "source": annotation.source
-                    })
+                    serialized_annotations.append(
+                        {
+                            "annotation": "relationship",
+                            "namespace": annotation.namespace,
+                            "source": annotation.source,
+                        }
+                    )
                 elif type(annotation) is ContentType:
-                    serialized_annotations.append({
-                        "annotation": 'content_type',
-                        "mime_type": annotation.mime_type
-                    })
+                    serialized_annotations.append(
+                        {
+                            "annotation": "content_type",
+                            "mime_type": annotation.mime_type,
+                        }
+                    )
                 elif annotation == ConflictingContentType:
-                    serialized_annotations.append({
-                        "annotation": 'content_type_conflict'
-                    })
+                    serialized_annotations.append(
+                        {"annotation": "content_type_conflict"}
+                    )
             document[target] = serialized_annotations
 
         # Store this in the Blender context.
@@ -306,20 +369,34 @@ class Annotations:
             self.annotations[target] = set()
             try:
                 for annotation in annotations:
-                    if annotation['annotation'] == 'relationship':
+                    if annotation["annotation"] == "relationship":
                         self.annotations[target].add(
-                            Relationship(namespace=annotation['namespace'], source=annotation['source']))
-                    elif annotation['annotation'] == 'content_type':
-                        self.annotations[target].add(ContentType(mime_type=annotation['mime_type']))
-                    elif annotation['annotation'] == 'content_type_conflict':
+                            Relationship(
+                                namespace=annotation["namespace"],
+                                source=annotation["source"],
+                            )
+                        )
+                    elif annotation["annotation"] == "content_type":
+                        self.annotations[target].add(
+                            ContentType(mime_type=annotation["mime_type"])
+                        )
+                    elif annotation["annotation"] == "content_type_conflict":
                         self.annotations[target].add(ConflictingContentType)
                     else:
-                        logging.warning(f"Unknown annotation type \"{annotation['annotation']}\" encountered.")
+                        logging.warning(
+                            f'Unknown annotation type "{annotation["annotation"]}" encountered.'
+                        )
                         continue
             except TypeError:  # Raised when `annotations` is not iterable.
-                logging.warning(f"Annotation for target \"{target}\" is not properly structured.")
+                logging.warning(
+                    f'Annotation for target "{target}" is not properly structured.'
+                )
             except KeyError as e:
                 # Raised when missing the 'annotation' key or a required key belonging to that annotation.
-                logging.warning(f"Annotation for target \"{target}\" missing key: {str(e)}")
+                logging.warning(
+                    f'Annotation for target "{target}" missing key: {str(e)}'
+                )
             if not self.annotations[target]:  # Nothing was added in the end.
-                del self.annotations[target]  # Don't store the empty target either then.
+                del self.annotations[
+                    target
+                ]  # Don't store the empty target either then.
