@@ -79,21 +79,6 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name="Scale", default=1.0, soft_min=0.001, soft_max=1000.0, min=1e-6, max=1e6
     )
 
-    def __init__(self):
-        """
-        Initializes the importer with empty fields.
-        """
-        super().__init__()
-        self.resource_objects = {}  # Dictionary mapping resource IDs to ResourceObjects.
-
-        # Dictionary mapping resource IDs to dictionaries mapping indexes to ResourceMaterial objects.
-        self.resource_materials = {}
-
-        # Which of our resource materials already exists in the Blender scene as a Blender material.
-        self.resource_to_material = {}
-
-        self.num_loaded = 0
-
     def execute(self, context):
         """
         The main routine that reads out the 3MF file.

@@ -25,17 +25,6 @@ import bpy.utils  # To (un)register the add-on.
 from .export_3mf import Export3MF  # Exports 3MF files.
 from .import_3mf import Import3MF  # Imports 3MF files.
 
-
-bl_info = {
-    "name": "3MF format",
-    "author": "Ghostkeeper",
-    "version": (1, 0, 2),
-    "blender": (2, 80, 0),
-    "location": "File > Import-Export",
-    "description": "Import-Export 3MF files",
-    "category": "Import-Export",
-}
-
 """
 Import and export 3MF files in Blender.
 """

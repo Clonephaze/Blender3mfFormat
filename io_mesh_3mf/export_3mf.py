@@ -75,18 +75,6 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         max=12,
     )
 
-    def __init__(self):
-        """
-        Initialize some fields with defaults before starting.
-        """
-        super().__init__()
-        self.next_resource_id = 1  # Which resource ID to generate for the next object.
-        self.num_written = 0  # How many objects we've written to the file.
-        self.material_resource_id = (
-            -1
-        )  # We write one material. This is the resource ID of that material.
-        self.material_name_to_index = {}  # For each material in Blender, the index in the 3MF materials group.
-
     def execute(self, context):
         """
         The main routine that writes the 3MF archive.

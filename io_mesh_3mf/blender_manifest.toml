@@ -1,0 +1,23 @@
+schema_version = "1.0.0"
+
+id = "ThreeMF_format"
+version = "1.0.3"
+name = "3MF format"
+tagline = "Import and export 3D Manufacturing Format (3MF) files"
+author = "Ghostkeeper"
+maintainer = "Clonephaze"
+
+type = "add-on"
+
+website = "https://github.com/Ghostkeeper/Blender3mfFormat"
+blender_version_min = "4.2.0"
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+copyright = [
+  "2025 Clonephaze",
+  "2020 Ghostkeeper",
+]
+
+[permissions]
+    "files" = "For import and export of 3MF files"
