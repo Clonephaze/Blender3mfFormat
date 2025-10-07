@@ -1,5 +1,7 @@
+
 # Blender add-on to import and export 3MF files.
 # Copyright (C) 2020 Ghostkeeper
+# Copyright (C) 2025 Jack (modernization for Blender 4.2+)
 # This add-on is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -11,9 +13,12 @@
 # <pep8 compliant>
 
 import collections  # For named tuples.
+
 import idprop.types  # To interpret property groups as metadata entries.
 
-MetadataEntry = collections.namedtuple("MetadataEntry", ["name", "preserve", "datatype", "value"])
+MetadataEntry = collections.namedtuple(
+    "MetadataEntry", ["name", "preserve", "datatype", "value"]
+)
 
 
 class Metadata:
@@ -66,12 +71,15 @@ class Metadata:
 
         # The two are consistent. Usually no need to store anything, since it's already stored.
         # The "preserve" property may be different. Preserve if any of them says to preserve.
-        if not competing.preserve and value.preserve:  # Prevent unnecessary construction of namedtuples.
+        if (
+            not competing.preserve and value.preserve
+        ):  # Prevent unnecessary construction of namedtuples.
             self.metadata[key] = MetadataEntry(
                 name=key,
                 preserve=True,
                 datatype=competing.datatype,
-                value=competing.value)
+                value=competing.value,
+            )
 
     def __getitem__(self, key):
         """
@@ -147,7 +155,9 @@ class Metadata:
         for metadata_entry in self.values():
             name = metadata_entry.name
             value = metadata_entry.value
-            if name == "Title":  # Has a built-in ID property for objects as well as scenes.
+            if (
+                name == "Title"
+            ):  # Has a built-in ID property for objects as well as scenes.
                 blender_object.name = value if value is not None else ""
             elif name == "3mf:partnumber":
                 # Special case: This is always a string and doesn't need the preserve attribute. We can simplify this to
@@ -173,21 +183,28 @@ class Metadata:
         for key in blender_object.keys():
             entry = blender_object[key]
             if key == "3mf:partnumber":
-                self[key] = MetadataEntry(name=key, preserve=True, datatype="xs:string", value=entry)
+                self[key] = MetadataEntry(
+                    name=key, preserve=True, datatype="xs:string", value=entry
+                )
                 continue
-            if isinstance(entry, idprop.types.IDPropertyGroup)\
-                    and "datatype" in entry.keys()\
-                    and "preserve" in entry.keys()\
-                    and "value" in entry.keys():  # Most likely a metadata entry from a previous 3MF file.
+            if (
+                isinstance(entry, idprop.types.IDPropertyGroup)
+                and "datatype" in entry.keys()
+                and "preserve" in entry.keys()
+                and "value" in entry.keys()
+            ):  # Most likely a metadata entry from a previous 3MF file.
                 self[key] = MetadataEntry(
                     name=key,
                     preserve=entry.get("preserve"),
                     datatype=entry.get("datatype"),
-                    value=entry.get("value"))
+                    value=entry.get("value"),
+                )
             # Don't mess with metadata added by the user or their other Blender add-ons. Don't want to break their
             # behaviour.
 
-        self["Title"] = MetadataEntry(name="Title", preserve=True, datatype="xs:string", value=blender_object.name)
+        self["Title"] = MetadataEntry(
+            name="Title", preserve=True, datatype="xs:string", value=blender_object.name
+        )
 
     def values(self):
         """

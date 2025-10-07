@@ -1,5 +1,6 @@
 # Blender add-on to import and export 3MF files.
 # Copyright (C) 2020 Ghostkeeper
+# Copyright (C) 2025 Jack (modernization for Blender 4.2+)
 # This add-on is free software; you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later
 # version.
@@ -8,7 +9,22 @@
 # You should have received a copy of the GNU General Public License along with this program; if not, write to the Free
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-# <pep8 compliant>
+# Reload functionality.
+if "bpy" in locals():
+    import importlib
+    from . import import_3mf, export_3mf
+
+    importlib.reload(import_3mf)
+    importlib.reload(export_3mf)
+else:
+    from . import import_3mf, export_3mf
+
+import bpy.types  # To (un)register the add-on as an import/export function.
+import bpy.utils  # To (un)register the add-on.
+
+from .export_3mf import Export3MF  # Exports 3MF files.
+from .import_3mf import Import3MF  # Imports 3MF files.
+
 
 bl_info = {
     "name": "3MF format",
@@ -17,26 +33,12 @@ bl_info = {
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Import-Export 3MF files",
-    "category": "Import-Export"
+    "category": "Import-Export",
 }
 
 """
 Import and export 3MF files in Blender.
 """
-
-# Reload functionality.
-if "bpy" in locals():
-    import importlib
-    if "import_3mf" in locals():
-        importlib.reload(import_3mf)
-    if "export_3mf" in locals():
-        importlib.reload(export_3mf)
-
-import bpy.utils  # To (un)register the add-on.
-import bpy.types  # To (un)register the add-on as an import/export function.
-
-from .import_3mf import Import3MF  # Imports 3MF files.
-from .export_3mf import Export3MF  # Exports 3MF files.
 
 
 def menu_import(self, _):
@@ -53,10 +55,7 @@ def menu_export(self, _):
     self.layout.operator(Export3MF.bl_idname, text="3D Manufacturing Format (.3mf)")
 
 
-classes = (
-    Import3MF,
-    Export3MF
-)
+classes = (Import3MF, Export3MF)
 
 
 def register():
