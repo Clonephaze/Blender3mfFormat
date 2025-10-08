@@ -12,24 +12,48 @@ Breaking Changes
 
 Features
 ----
-* Full compatibility with Blender 4.2, 4.3, 4.5, and 5.0 Alpha
-* Verified compatibility with all modern Blender APIs:
-  - `PrincipledBSDFWrapper` for material handling
-  - `mesh.loop_triangles` for mesh data
-  - `evaluated_depsgraph_get()` for modifier evaluation
-* Comprehensive test suite (142 unit tests + 16 integration tests)
-* Cross-platform integration test runners (Windows PowerShell, macOS/Linux Bash)
-* Multi-version testing support (test against all installed Blender versions)
-* Automated CI/CD testing via GitHub Actions
-* Updated documentation and contribution guidelines
+* **Blender Compatibility:**
+  - Full compatibility with Blender 4.2, 4.3, 4.5, and 5.0 Alpha
+  - Verified compatibility with all modern Blender APIs:
+    - `PrincipledBSDFWrapper` for material handling
+    - `mesh.loop_triangles` for mesh data
+    - `evaluated_depsgraph_get()` for modifier evaluation
+* **User Experience:**
+  - Import/export status messages now appear in Blender's UI
+  - Error and warning messages are user-friendly and actionable
+  - Warning deduplication prevents UI spam with complex files
+  - Console logs still available for detailed debugging
+* **Developer Experience:**
+  - Comprehensive test suite (142 unit tests + 16 integration tests)
+  - Cross-platform integration test runners (Windows PowerShell, macOS/Linux Bash)
+  - Multi-version testing support (test against all installed Blender versions)
+  - Automated CI/CD testing via GitHub Actions
+  - Complete type hints for IDE support and type checking
+  - Clear public API with `__all__` exports
+  - Updated documentation and contribution guidelines
 
 Technical Improvements
 ----
-* Replaced wildcard imports with explicit imports for better code maintainability
-* Removed deprecated `__init__()` methods from operators (Blender 4.2+ requirement)
-* Fixed state variable initialization in export/import classes
-* Updated manifest format for modern Blender addon structure
-* Improved error handling for malformed 3MF files
+* **Code Quality:**
+  - Added comprehensive type hints to all 7 modules (100% coverage)
+  - Replaced wildcard imports with explicit imports for better code maintainability
+  - Converted all string concatenation to modern f-strings
+  - Added `__all__` exports to all modules for clear public API definition
+  - Removed outdated Python 3.7 references from code comments
+* **Operator Improvements:**
+  - Removed deprecated `__init__()` methods from operators (Blender 4.2+ requirement)
+  - Fixed state variable initialization in export/import classes
+  - Added `self.report()` calls for user-visible error/warning/info messages
+  - Implemented warning deduplication to prevent UI spam on complex files
+* **Error Handling:**
+  - All errors now display in Blender's UI (not just console logs)
+  - Warnings are deduplicated - each unique issue reported only once
+  - Detailed logs still available in console for debugging
+  - Better error messages for malformed 3MF files
+* **Build System:**
+  - Updated manifest format for modern Blender addon structure (blender_manifest.toml)
+  - Fixed test mock objects for Python 3.11+ compatibility
+  - Added warning deduplication tracker initialization in tests
 
 Bug Fixes
 ----
@@ -37,18 +61,43 @@ Bug Fixes
 * Fixed material color handling with modern shader node API
 * Fixed mesh triangulation with current API patterns
 * Corrected depsgraph evaluation for objects with modifiers
+* Fixed mock objects in unit tests to support `report()` method
+* Added missing `_reported_warnings` initialization in test setup
+* Resolved AttributeError issues in CI/CD test runs
 
 Testing
 ----
-* All original unit tests updated and passing (Python 3.11)
-* New integration tests verify real-world Blender functionality
-* Tested across Blender 4.2 LTS, 4.3, 4.5, and 5.0 Alpha
-* Verified export → import round-trip functionality
-* Confirmed material preservation through round-trip operations
+* **Unit Tests (142 tests, all passing):**
+  - All original unit tests updated and passing (Python 3.11)
+  - Mock objects updated for modern operator interface
+  - Tests verify type hints don't break runtime behavior
+  - Code style validation with pycodestyle
+* **Integration Tests (16 tests, all passing):**
+  - New integration tests verify real-world Blender functionality
+  - Test simple and complex geometry export/import
+  - Verify material round-trip preservation
+  - Test modifier evaluation
+  - Confirm selection-only export
+  - Validate Blender 4.2+ API compatibility
+* **Cross-Platform Test Runners:**
+  - PowerShell script for Windows
+  - Bash script for macOS/Linux
+  - Auto-detection of Blender installations
+  - Multi-version testing support
+* **CI/CD:**
+  - GitHub Actions automatically run all 142 unit tests
+  - Python 3.11 validation
+  - Code style checks
+* **Real-World Testing:**
+  - Tested across Blender 4.2 LTS, 4.3, 4.5, and 5.0 Alpha
+  - Verified export → import round-trip functionality
+  - Confirmed material preservation through round-trip operations
+  - Tested with complex multi-object 3MF files (50+ objects)
+  - Verified warning deduplication with extension-heavy files
 
 Contributors
 ----
-* Modernization work by Jack (Clonephaze)
+* Modernization work by Clonephaze (Jack Smith)
 * Original addon by Ghostkeeper
 
 1.0.2 - Bug Fixes
