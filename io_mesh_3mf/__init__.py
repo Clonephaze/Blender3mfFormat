@@ -25,6 +25,14 @@ import bpy.utils  # To (un)register the add-on.
 from .export_3mf import Export3MF  # Exports 3MF files.
 from .import_3mf import Import3MF  # Imports 3MF files.
 
+# IDE and Documentation support.
+__all__ = [
+    "Export3MF",
+    "Import3MF",
+    "register",
+    "unregister",
+]
+
 """
 Import and export 3MF files in Blender.
 """

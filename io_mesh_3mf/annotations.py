@@ -45,6 +45,14 @@ ANNOTATION_FILE = (
     ".3mf_annotations"  # File name to use to store the annotations in the Blender data.
 )
 
+# IDE and Documentation support.
+__all__ = [
+    "Annotations",
+    "Relationship",
+    "ContentType",
+    "ConflictingContentType",
+]
+
 
 class Annotations:
     """
@@ -83,9 +91,9 @@ class Annotations:
         :param rels_file: A file stream containing a .rels file.
         """
         # Relationships are evaluated relative to the path that the _rels folder around the .rels file is on. If any.
-        base_path = os.path.dirname(rels_file.name) + "/"
+        base_path = f"{os.path.dirname(rels_file.name)}/"
         if os.path.basename(os.path.dirname(base_path)) == RELS_FOLDER:
-            base_path = os.path.dirname(os.path.dirname(base_path)) + "/"
+            base_path = f"{os.path.dirname(os.path.dirname(base_path))}/"
 
         try:
             root = xml.etree.ElementTree.ElementTree(file=rels_file)
@@ -203,8 +211,8 @@ class Annotations:
                     root,
                     f"{{{RELS_NAMESPACE}}}Relationship",
                     attrib={
-                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                        f"{{{RELS_NAMESPACE}}}Target": "/" + target,
+                        f"{{{RELS_NAMESPACE}}}Id": f"rel{current_id}",
+                        f"{{{RELS_NAMESPACE}}}Target": f"/{target}",
                         f"{{{RELS_NAMESPACE}}}Type": namespace,
                     },
                 )
@@ -216,8 +224,8 @@ class Annotations:
                     root,
                     f"{{{RELS_NAMESPACE}}}Relationship",
                     attrib={
-                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                        f"{{{RELS_NAMESPACE}}}Target": "/" + MODEL_LOCATION,
+                        f"{{{RELS_NAMESPACE}}}Id": f"rel{current_id}",
+                        f"{{{RELS_NAMESPACE}}}Target": f"/{MODEL_LOCATION}",
                         f"{{{RELS_NAMESPACE}}}Type": MODEL_REL,
                     },
                 )
@@ -226,9 +234,7 @@ class Annotations:
             document = xml.etree.ElementTree.ElementTree(root)
 
             # Write that XML document to a file.
-            rels_file = (
-                source + RELS_FOLDER + "/.rels"
-            )  # _rels folder in the "source" folder.
+            rels_file = f"{source}{RELS_FOLDER}/.rels"  # _rels folder in the "source" folder.
             with archive.open(rels_file, "w") as f:
                 document.write(
                     f,
@@ -295,7 +301,7 @@ class Annotations:
                         root,
                         f"{{{CONTENT_TYPES_NAMESPACE}}}Override",
                         attrib={
-                            f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": "/" + target,
+                            f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": f"/{target}",
                             f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": annotation.mime_type,
                         },
                     )

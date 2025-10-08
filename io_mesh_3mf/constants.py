@@ -17,6 +17,27 @@ These are the constants that are inherent to the 3MF file format.
 
 from typing import Set, Dict
 
+# IDE and Documentation support.
+__all__ = [
+    "SUPPORTED_EXTENSIONS",
+    "conflicting_mustpreserve_contents",
+    "MODEL_LOCATION",
+    "CONTENT_TYPES_LOCATION",
+    "RELS_FOLDER",
+    "MODEL_REL",
+    "THUMBNAIL_REL",
+    "RELS_MIMETYPE",
+    "MODEL_MIMETYPE",
+    "MODEL_NAMESPACE",
+    "MODEL_NAMESPACES",
+    "MODEL_DEFAULT_UNIT",
+    "CONTENT_TYPES_NAMESPACE",
+    "CONTENT_TYPES_NAMESPACES",
+    "RELS_NAMESPACE",
+    "RELS_NAMESPACES",
+    "RELS_RELATIONSHIP_FIND",
+]
+
 SUPPORTED_EXTENSIONS: Set[str] = set()  # Set of namespaces for 3MF extensions that we support.
 # File contents to use when files must be preserved but there's a file with different content in a previous archive.
 # Only for flagging. This will not be in the final 3MF archives.

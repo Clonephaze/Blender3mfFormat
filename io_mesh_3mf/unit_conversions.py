@@ -16,6 +16,12 @@ This file defines unit conversions between Blender's units and 3MF's units.
 
 from typing import Dict
 
+# IDE and Documentation support.
+__all__ = [
+    "blender_to_metre",
+    "threemf_to_metre",
+]
+
 blender_to_metre: Dict[str, float] = {  # Scale of each of Blender's length units to a metre.
     "THOU": 0.0000254,
     "INCHES": 0.0254,

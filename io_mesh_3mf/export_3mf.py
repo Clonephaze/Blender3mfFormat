@@ -38,6 +38,8 @@ from .unit_conversions import blender_to_metre, threemf_to_metre
 
 # <pep8 compliant>
 
+# IDE and Documentation support.
+__all__ = ["Export3MF"]
 
 log = logging.getLogger(__name__)
 
@@ -129,9 +131,11 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             archive.close()
         except EnvironmentError as e:
             log.error(f"Unable to complete writing to 3MF archive: {e}")
+            self.report({'ERROR'}, f"Unable to complete writing to 3MF archive: {e}")
             return {"CANCELLED"}
 
         log.info(f"Exported {self.num_written} objects to 3MF archive {self.filepath}.")
+        self.report({'INFO'}, f"Exported {self.num_written} objects to {self.filepath}")
         return {"FINISHED"}
 
     # The rest of the functions are in order of when they are called.
@@ -157,6 +161,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             self.must_preserve(archive)
         except EnvironmentError as e:
             log.error(f"Unable to write 3MF archive to {filepath}: {e}")
+            self.report({'ERROR'}, f"Unable to write 3MF archive to {filepath}: {e}")
             return None
 
         return archive
@@ -517,12 +522,10 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         pieces = (
             row[:3] for row in transformation.transposed()
         )  # Don't convert the 4th column.
-        result = ""
-        for cell in itertools.chain.from_iterable(pieces):
-            if result != "":  # First loop, don't put a space in.
-                result += " "
-            result += self.format_number(cell, 6)  # Never use scientific notation!
-        return result
+        formatted_cells = [
+            self.format_number(cell, 6) for cell in itertools.chain.from_iterable(pieces)
+        ]
+        return " ".join(formatted_cells)
 
     def write_vertices(self, mesh_element: xml.etree.ElementTree.Element, 
                       vertices: List[bpy.types.MeshVertex]) -> None:
@@ -612,9 +615,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         :param decimals: The maximum number of places after the radix to write.
         :return: A string representing that number.
         """
-        formatted = (
-            ("{:." + str(decimals) + "f}").format(number).rstrip("0").rstrip(".")
-        )
+        formatted = f"{number:.{decimals}f}".rstrip("0").rstrip(".")
         if formatted == "":
             return "0"
         return formatted

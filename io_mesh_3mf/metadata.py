@@ -22,6 +22,11 @@ MetadataEntry = collections.namedtuple(
     "MetadataEntry", ["name", "preserve", "datatype", "value"]
 )
 
+__all__ = [
+    "Metadata",
+    "MetadataEntry",
+]
+
 
 class Metadata:
     """
