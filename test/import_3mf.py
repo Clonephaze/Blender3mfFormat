@@ -32,7 +32,13 @@ bpy.types.Operator = MockOperator
 bpy_extras.io_utils.ImportHelper = MockImportHelper
 bpy_extras.io_utils.ExportHelper = MockExportHelper
 import io_mesh_3mf.import_3mf  # Now we may safely import the unit under test.
-from io_mesh_3mf.constants import *
+# from io_mesh_3mf.constants import * ## Annotated out to use explicict imports below
+from io_mesh_3mf.constants import (
+    RELS_MIMETYPE,
+    MODEL_MIMETYPE,
+    MODEL_NAMESPACE,
+    CONTENT_TYPES_LOCATION
+)
 # To compare the metadata objects created by the code under test.
 from io_mesh_3mf.metadata import Metadata, MetadataEntry
 
@@ -56,6 +62,12 @@ class TestImport3MF(unittest.TestCase):
         Creates fixtures to help running these tests.
         """
         self.importer = io_mesh_3mf.import_3mf.Import3MF()  # An importer class.
+
+        # Initialize state variables that are normally set in execute()
+        self.importer.resource_objects = {}
+        self.importer.resource_materials = {}
+        self.importer.resource_to_material = {}
+        self.importer.num_loaded = 0
 
         self.single_triangle = io_mesh_3mf.import_3mf.ResourceObject(  # A model with just a single triangle.
             vertices=[(0.0, 0.0, 0.0), (5.0, 0.0, 1.0), (0.0, 5.0, 1.0)],

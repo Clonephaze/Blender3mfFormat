@@ -2,3 +2,5 @@
 releases
 /.github/chatmodes
 /.github/prompts
+*.pyc
+*.zip

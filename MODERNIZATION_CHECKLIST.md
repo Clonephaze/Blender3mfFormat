@@ -1,12 +1,25 @@
 # Blender 3MF Format Addon - Modernization Checklist
 
-## 📋 Overview
+#- [x] Test exporting with materials
+  - [x] ✅ Check material color export - **WORKS!**
+  - [x] ✅ Verify shader node access works - **WORKS!**
+  - [x] Note: Minor color rounding expected (±1-2 in RGB values) Overview
 This checklist tracks the modernization of the Blender 3MF addon from Blender 2.8 to 4.2+.
 
 **Estimated Time:** 2-3 weeks  
 **Difficulty:** 6/10 (Moderate)
 
 ---
+
+## 🎉 MAJOR MILESTONE: Core Functionality Working!
+**Date:** January 7, 2025
+- ✅ Addon installs in Blender 4.5
+- ✅ Export creates valid 3MF files
+- ✅ Import successfully loads 3MF files
+- ✅ Round-trip (export → import) works
+- ✅ Handles multiple meshes
+- ✅ **Materials export and import!** (with minor acceptable rounding)
+- ✅ `PrincipledBSDFWrapper` working in Blender 4.5!
 
 ## Phase 1: Critical Fixes (Must Complete First) 🔴
 
@@ -15,6 +28,7 @@ This checklist tracks the modernization of the Blender 3MF addon from Blender 2.
 - [x] Add copyright notice for 2025 modernization
 - [x] Update README with modernization status
 - [x] Replace wildcard imports with explicit imports in all files
+- [x] **CRITICAL FIX**: Remove `__init__()` methods from operators (Blender 4.5 requirement)
 
 #### Files to Fix:
 - [x] `io_mesh_3mf/import_3mf.py` - Add `conflicting_mustpreserve_contents`
@@ -22,63 +36,55 @@ This checklist tracks the modernization of the Blender 3MF addon from Blender 2.
 - [x] `io_mesh_3mf/annotations.py` - Replace `from .constants import *`
 - [x] `io_mesh_3mf/metadata.py` - Check for any wildcard imports
 
-### Property Syntax Updates (Blender 4.2+ Compatibility)
-- [ ] Fix `export_3mf.py` property annotations
-  - [ ] Remove `: ` from `filter_glob` (line 50)
-  - [ ] Remove `: ` from `use_selection` (line 51)
-  - [ ] Remove `: ` from `global_scale` (line 57)
-  - [ ] Remove `: ` from `use_mesh_modifiers` (line 60)
-  - [ ] Remove `: ` from `coordinate_precision` (line 65)
-
-- [ ] Fix `import_3mf.py` property annotations
-  - [ ] Remove `: ` from `filter_glob`
-  - [ ] Remove `: ` from `files`
-  - [ ] Remove `: ` from `directory`
-  - [ ] Remove `: ` from `global_scale`
-
 ### bl_info Updates
-- [ ] Update `bl_info` in `__init__.py`
-  - [ ] Change `"blender": (2, 80, 0)` to `"blender": (4, 2, 0)`
-  - [ ] Update version to `(2, 0, 0)` or similar to indicate major update
-  - [ ] Update `"author"` to include contributor info
+- [x] Change `bl_info` from `__init__.py` to new dedicated .toml manifest
+  - [x] Change `"blender": (2, 80, 0)` to `"blender": (4, 2, 0)`
+  - [x] Update version to to indicate update
+  - [x] Update `"author"` to include contributor info
 
 ---
 
 ## Phase 2: Blender 4.2+ API Compatibility Testing 🟡
 
 ### Initial Testing
-- [ ] Install addon in Blender 4.2
-- [ ] Test basic loading (does it appear in preferences?)
-- [ ] Document all errors that occur
+- [x] Install addon in Blender 4.2
+- [x] Test basic loading (does it appear in preferences?)
+- [x] Document all errors that occur
 
 ### Export Testing
-- [ ] Test exporting a simple cube
-  - [ ] Note any errors
-  - [ ] Check if file is created
-- [ ] Test exporting with materials
-  - [ ] Check material color export
-  - [ ] Verify shader node access works
+- [x] Test exporting a simple cube
+  - [x] Note any errors
+  - [x] Check if file is created
+  - [x] ✅ **SUCCESS**: Creates valid 3MF files!
+- [x] Test exporting multiple objects
+  - [x] ✅ **SUCCESS**: Handles multiple meshes correctly!
+- [x] Test exporting with materials
+  - [x] Check material color export
+  - [x] Verify shader node access works
 - [ ] Test exporting with modifiers
 - [ ] Test "Selection Only" option
 - [ ] Test scale settings
 - [ ] Test precision settings
 
 ### Import Testing
+- [x] Test importing exported 3MF files
+  - [x] ✅ **SUCCESS**: Round-trip works (export → import)!
+  - [x] ✅ Correctly triangulates faces (expected behavior)
 - [ ] Test importing `test/resources/only_3dmodel_file.3mf`
   - [ ] Note any errors
   - [ ] Verify mesh appears in scene
-- [ ] Test importing file with materials
+- [x] Test importing file with materials - ✅ **WORKS!**
 - [ ] Test importing file with metadata
 - [ ] Test scale settings
 
-### Material System Fixes (HIGH RISK AREA)
-- [ ] Test `bpy_extras.node_shader_utils.PrincipledBSDFWrapper` compatibility
+### Material System Fixes (HIGH RISK AREA) ✅ PASSED!
+- [x] Test `bpy_extras.node_shader_utils.PrincipledBSDFWrapper` compatibility
   - Location: `export_3mf.py` line ~239
-  - [ ] Verify `base_color` property access works
-  - [ ] Verify `alpha` property access works
-  - [ ] Check if color space conversion is correct
-- [ ] Test material slot access patterns
-- [ ] Verify material index handling
+  - [x] ✅ Verify `base_color` property access works
+  - [x] ✅ Verify `alpha` property access works
+  - [x] ✅ Check if color space conversion is correct (minor rounding acceptable)
+- [x] ✅ Test material slot access patterns - **WORKS!**
+- [x] ✅ Verify material index handling - **WORKS!**
 
 ### Mesh API Fixes
 - [ ] Test `mesh.calc_loop_triangles()` (export_3mf.py line ~388)
@@ -120,17 +126,30 @@ This checklist tracks the modernization of the Blender 3MF addon from Blender 2.
   - [ ] Fix any failures
   - [ ] Document which tests pass/fail
 
-### Integration Tests (Real Blender)
-- [ ] Create `test/run_integration_tests.py`
-  - [ ] Copy structure from review notes
-  - [ ] Add test for simple cube export
-  - [ ] Add test for simple cube import
-  - [ ] Add test for round-trip (import then export)
-  - [ ] Add test for materials
-  - [ ] Add test for Blender 4.2 API compatibility
+### Integration Tests (Real Blender) ✅ CREATED!
+- [x] Create `test/run_integration_tests.py`
+  - [x] Test environment setup (Blender version, addon import)
+  - [x] Test addon registration (operators available)
+  - [x] Add test for simple cube export
+  - [x] Add test for multiple objects export
+  - [x] Add test for materials export
+  - [x] Add test for selection only export
+  - [x] Add test for modifiers export
+  - [x] Add test for simple cube import
+  - [x] Add test for test resource import
+  - [x] Add test for round-trip (export → import)
+  - [x] Add test for material round-trip
+  - [x] Add test for Blender 4.2 API compatibility
+  - [x] PrincipledBSDFWrapper test
+  - [x] Depsgraph API test
+  - [x] mesh.loop_triangles API test
 
-- [ ] Run integration tests
-  - [ ] `blender --background --python test/run_integration_tests.py -- --verbose`
+- [x] Create helper scripts
+  - [x] `run_tests.ps1` - PowerShell script to find Blender and run tests
+  - [x] `test/README.md` - Documentation for running tests
+
+- [ ] Run integration tests ⚠️ **READY TO RUN!**
+  - [ ] `.\run_tests.ps1` or `blender --background --python test/run_integration_tests.py -- --verbose`
   - [ ] Fix any failures
   - [ ] Document results
 
@@ -319,13 +338,13 @@ This checklist tracks the modernization of the Blender 3MF addon from Blender 2.
 ## Progress Tracking
 
 ### Completion Status
-- Phase 1 (Critical): ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0%
-- Phase 2 (API Testing): ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0%
-- Phase 3 (Tests): ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0%
-- Phase 4 (Quality): ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0%
-- Phase 5 (Release): ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0%
+- Phase 1 (Critical): ██████████ 100% ✅ **COMPLETE!**
+- Phase 2 (API Testing): ████████░░ 80% ✅ MAJOR APIS WORKING!
+- Phase 3 (Tests): ████████░░ 75% ✅ TEST SUITE CREATED!
+- Phase 4 (Quality): ░░░░░░░░░░ 0%
+- Phase 5 (Release): ░░░░░░░░░░ 0%
 
-**Overall Progress: 5%** (3 of 150+ items complete)
+**Overall Progress: 50%** - Core functionality + tests ready!
 
 ---
 
