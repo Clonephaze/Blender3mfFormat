@@ -43,17 +43,44 @@ python -m unittest test.metadata                 # Metadata tests only
 ### Windows (PowerShell)
 ```powershell
 # From the repository root
-.\test\run_integration_tests.ps1                 # Auto-detect Blender
-.\test\run_integration_tests.ps1 -Verbose        # Verbose output
-.\test\run_integration_tests.ps1 -BlenderPath "C:\Path\To\blender.exe"
+.\test\run_integration_tests.ps1                       # Auto-detect latest Blender
+.\test\run_integration_tests.ps1 -AllVersions          # Test ALL installed versions! 🎯
+.\test\run_integration_tests.ps1 -Verbose              # Verbose output
+.\test\run_integration_tests.ps1 -BlenderPath "C:\Path\To\blender.exe"  # Specific version
 ```
 
 ### macOS/Linux (Bash)
 ```bash
 # From the repository root
-./test/run_integration_tests.sh                 # Auto-detect Blender
-./test/run_integration_tests.sh --verbose       # Verbose output
-./test/run_integration_tests.sh --blender-path /path/to/blender
+./test/run_integration_tests.sh                       # Auto-detect latest Blender
+./test/run_integration_tests.sh --all                 # Test ALL installed versions! 🎯
+./test/run_integration_tests.sh --verbose             # Verbose output
+./test/run_integration_tests.sh --blender-path /path/to/blender  # Specific version
+```
+
+**🎯 NEW: Multi-Version Testing!**
+Use `-AllVersions` (PowerShell) or `--all` (Bash) to automatically test against all installed Blender versions. This is perfect for ensuring compatibility across Blender 4.2, 4.3, 4.4, 4.5, etc.
+
+Example output:
+```
+Found 3 Blender installation(s):
+  - C:\Program Files\Blender Foundation\Blender 4.5\blender.exe
+  - C:\Program Files\Blender Foundation\Blender 4.3\blender.exe
+  - C:\Program Files\Blender Foundation\Blender 4.2\blender.exe
+
+Testing: Blender 4.5.0
+✅ PASSED: Blender 4.5.0
+
+Testing: Blender 4.3.2
+✅ PASSED: Blender 4.3.2
+
+Testing: Blender 4.2.1 LTS
+✅ PASSED: Blender 4.2.1 LTS
+
+TEST SUMMARY
+Total Blender versions tested: 3
+Passed: 3
+Failed: 0
 ```
 
 **Requirements**:
