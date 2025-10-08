@@ -15,40 +15,42 @@ This module defines some constants for 3MF's file structure.
 These are the constants that are inherent to the 3MF file format.
 """
 
-SUPPORTED_EXTENSIONS = set()  # Set of namespaces for 3MF extensions that we support.
+from typing import Set, Dict
+
+SUPPORTED_EXTENSIONS: Set[str] = set()  # Set of namespaces for 3MF extensions that we support.
 # File contents to use when files must be preserved but there's a file with different content in a previous archive.
 # Only for flagging. This will not be in the final 3MF archives.
-conflicting_mustpreserve_contents = "<Conflicting MustPreserve file!>"
+conflicting_mustpreserve_contents: str = "<Conflicting MustPreserve file!>"
 
 # Default storage locations.
-MODEL_LOCATION = "3D/3dmodel.model"  # Conventional location for the 3D model data.
-CONTENT_TYPES_LOCATION = "[Content_Types].xml"  # Location of the content types definition.
-RELS_FOLDER = "_rels"  # Folder name to store relationships files in.
+MODEL_LOCATION: str = "3D/3dmodel.model"  # Conventional location for the 3D model data.
+CONTENT_TYPES_LOCATION: str = "[Content_Types].xml"  # Location of the content types definition.
+RELS_FOLDER: str = "_rels"  # Folder name to store relationships files in.
 
 # Relationship types.
-MODEL_REL = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"  # Relationship type of 3D models.
-THUMBNAIL_REL = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail"
+MODEL_REL: str = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"  # Relationship type of 3D models.
+THUMBNAIL_REL: str = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail"
 
 # MIME types of files in the archive.
-RELS_MIMETYPE = "application/vnd.openxmlformats-package.relationships+xml"  # MIME type of .rels files.
-MODEL_MIMETYPE = "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"  # MIME type of .model files.
+RELS_MIMETYPE: str = "application/vnd.openxmlformats-package.relationships+xml"  # MIME type of .rels files.
+MODEL_MIMETYPE: str = "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"  # MIME type of .model files.
 
 # Constants in the 3D model file.
-MODEL_NAMESPACE = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
-MODEL_NAMESPACES = {
+MODEL_NAMESPACE: str = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+MODEL_NAMESPACES: Dict[str, str] = {
     "3mf": MODEL_NAMESPACE
 }
-MODEL_DEFAULT_UNIT = "millimeter"  # If the unit is missing, it will be this.
+MODEL_DEFAULT_UNIT: str = "millimeter"  # If the unit is missing, it will be this.
 
 # Constants in the ContentTypes file.
-CONTENT_TYPES_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
-CONTENT_TYPES_NAMESPACES = {
+CONTENT_TYPES_NAMESPACE: str = "http://schemas.openxmlformats.org/package/2006/content-types"
+CONTENT_TYPES_NAMESPACES: Dict[str, str] = {
     "ct": CONTENT_TYPES_NAMESPACE
 }
 
 # Constants in the .rels files.
-RELS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
-RELS_NAMESPACES = {  # Namespaces used for the rels files.
+RELS_NAMESPACE: str = "http://schemas.openxmlformats.org/package/2006/relationships"
+RELS_NAMESPACES: Dict[str, str] = {  # Namespaces used for the rels files.
     "rel": RELS_NAMESPACE
 }
-RELS_RELATIONSHIP_FIND = "rel:Relationship"
+RELS_RELATIONSHIP_FIND: str = "rel:Relationship"

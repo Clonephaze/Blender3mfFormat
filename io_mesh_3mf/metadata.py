@@ -13,7 +13,9 @@
 # <pep8 compliant>
 
 import collections  # For named tuples.
+from typing import Iterator, Union
 
+import bpy.types  # For type hints
 import idprop.types  # To interpret property groups as metadata entries.
 
 MetadataEntry = collections.namedtuple(
@@ -47,7 +49,7 @@ class Metadata:
         """
         self.metadata = {}
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: MetadataEntry) -> None:
         """
         Add a metadata entry to this storage.
         :param key: The name of the entry.
@@ -81,7 +83,7 @@ class Metadata:
                 value=competing.value,
             )
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> MetadataEntry:
         """
         Retrieves a metadata entry, if it exists and was not in conflict.
         :param key: The name of the metadata entry to get.
@@ -93,7 +95,7 @@ class Metadata:
             raise KeyError(key)
         return self.metadata[key]
 
-    def __contains__(self, item):
+    def __contains__(self, item: str) -> bool:
         """
         Tests if a metadata entry with a certain name is present and not in conflict.
         :param item: The name of the metadata entry to test for.
@@ -102,7 +104,7 @@ class Metadata:
         """
         return item in self.metadata and self.metadata[item] is not None
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """
         Checks if there is any content in this metadata storage.
 
@@ -111,7 +113,7 @@ class Metadata:
         """
         return any(self.values())
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Returns the number of valid items in this metadata storage.
 
@@ -120,7 +122,7 @@ class Metadata:
         """
         return sum(1 for _ in self.values())
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         """
         Completely delete all traces of a metadata entry from this storage.
 
@@ -133,7 +135,7 @@ class Metadata:
         if key in self.metadata:
             del self.metadata[key]
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Compares two metadata groups together.
 
@@ -144,7 +146,7 @@ class Metadata:
         """
         return self.metadata == other.metadata
 
-    def store(self, blender_object):
+    def store(self, blender_object: Union[bpy.types.Object, bpy.types.Scene]) -> None:
         """
         Store this metadata in a Blender object.
 
@@ -170,7 +172,7 @@ class Metadata:
                     "value": value,
                 }
 
-    def retrieve(self, blender_object):
+    def retrieve(self, blender_object: Union[bpy.types.Object, bpy.types.Scene]) -> None:
         """
         Retrieve metadata from a Blender object.
 
@@ -206,7 +208,7 @@ class Metadata:
             name="Title", preserve=True, datatype="xs:string", value=blender_object.name
         )
 
-    def values(self):
+    def values(self) -> Iterator[MetadataEntry]:
         """
         Return all metadata entries that are registered in this storage and not in conflict.
         :return: A generator of metadata entries.

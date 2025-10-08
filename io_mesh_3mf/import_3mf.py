@@ -17,6 +17,7 @@ import os.path  # To take file paths relative to the selected directory.
 import re  # To find files in the archive based on the content types.
 import xml.etree.ElementTree  # To parse the 3dmodel.model file.
 import zipfile  # To read the 3MF files which are secretly zip archives.
+from typing import Optional, Dict, Set, List, Tuple, Pattern, IO
 
 import bpy  # The Blender API.
 import bpy.ops  # To adjust the camera to fit models.
@@ -79,7 +80,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name="Scale", default=1.0, soft_min=0.001, soft_max=1000.0, min=1e-6, max=1e6
     )
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         """
         The main routine that reads out the 3MF file.
 
@@ -182,7 +183,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
     # The rest of the functions are in order of when they are called.
 
-    def read_archive(self, path):
+    def read_archive(self, path: str) -> Dict[str, List[IO[bytes]]]:
         """
         Creates file streams from all the files in the archive.
 
@@ -209,7 +210,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             return result
         return result
 
-    def read_content_types(self, archive):
+    def read_content_types(self, archive: zipfile.ZipFile) -> List[Tuple[Pattern[str], str]]:
         """
         Read the content types from a 3MF archive.
 
@@ -281,7 +282,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return result
 
-    def assign_content_types(self, archive, content_types):
+    def assign_content_types(self, archive: zipfile.ZipFile, 
+                            content_types: List[Tuple[Pattern[str], str]]) -> Dict[str, str]:
         """
         Assign a MIME type to each file in the archive.
 
@@ -306,7 +308,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return result
 
-    def must_preserve(self, files_by_content_type, annotations):
+    def must_preserve(self, files_by_content_type: Dict[str, List[IO[bytes]]], 
+                     annotations: Annotations) -> None:
         """
         Preserves files that are marked with the 'MustPreserve' relationship and PrintTickets.
 
@@ -368,7 +371,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         handle = bpy.data.texts.new(filename)
                         handle.write(file_contents)
 
-    def is_supported(self, required_extensions):
+    def is_supported(self, required_extensions: str) -> bool:
         """
         Determines if a document is supported by this add-on.
         :param required_extensions: The value of the `requiredextensions` attribute of the root node of the XML
@@ -379,7 +382,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         extensions = set(filter(lambda x: x != "", extensions))
         return extensions <= SUPPORTED_EXTENSIONS
 
-    def unit_scale(self, context, root):
+    def unit_scale(self, context: bpy.types.Context, 
+                  root: xml.etree.ElementTree.Element) -> float:
         """
         Get the scaling factor we need to use for this document, according to its unit.
         :param context: The Blender context.
@@ -402,7 +406,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return scale
 
-    def read_metadata(self, node, original_metadata=None):
+    def read_metadata(self, node: xml.etree.ElementTree.Element, 
+                     original_metadata: Optional[Metadata] = None) -> Metadata:
         """
         Reads the metadata tags from a metadata group.
         :param node: A node in the 3MF document that contains <metadata> tags. This can be either a root node, or a
@@ -435,7 +440,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return metadata
 
-    def read_materials(self, root):
+    def read_materials(self, root: xml.etree.ElementTree.Element) -> None:
         """
         Read out all of the material resources from the 3MF document.
 
@@ -507,7 +512,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     material_id
                 ]  # Don't leave empty material sets hanging.
 
-    def read_objects(self, root):
+    def read_objects(self, root: xml.etree.ElementTree.Element) -> None:
         """
         Reads all repeatable build objects from the resources of an XML root node.
 
@@ -574,7 +579,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 metadata=metadata,
             )
 
-    def read_vertices(self, object_node):
+    def read_vertices(self, object_node: xml.etree.ElementTree.Element) -> List[Tuple[float, float, float]]:
         """
         Reads out the vertices from an XML node of an object.
 
@@ -606,7 +611,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             result.append((x, y, z))
         return result
 
-    def read_triangles(self, object_node, default_material, material_pid):
+    def read_triangles(self, object_node: xml.etree.ElementTree.Element, 
+                      default_material: Optional[int], 
+                      material_pid: Optional[int]) -> Tuple[List[Tuple[int, int, int]], List[Optional[int]]]:
         """
         Reads out the triangles from an XML node of an object.
 
@@ -659,7 +666,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 continue  # No fallback this time. Leave out the entire triangle.
         return vertices, materials
 
-    def read_components(self, object_node):
+    def read_components(self, object_node: xml.etree.ElementTree.Element) -> List[Component]:
         """
         Reads out the components from an XML node of an object.
 
@@ -683,7 +690,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             result.append(Component(resource_object=objectid, transformation=transform))
         return result
 
-    def parse_transformation(self, transformation_str):
+    def parse_transformation(self, transformation_str: str) -> mathutils.Matrix:
         """
         Parses a transformation matrix as written in the 3MF files.
 
@@ -770,12 +777,12 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
     def build_object(
         self,
-        resource_object,
-        transformation,
-        metadata,
-        objectid_stack_trace,
-        parent=None,
-    ):
+        resource_object: ResourceObject,
+        transformation: mathutils.Matrix,
+        metadata: Metadata,
+        objectid_stack_trace: List[int],
+        parent: Optional[bpy.types.Object] = None,
+    ) -> Optional[bpy.types.Object]:
         """
         Converts a resource object into a Blender object.
 
