@@ -81,6 +81,17 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         name="Scale", default=1.0, soft_min=0.001, soft_max=1000.0, min=1e-6, max=1e6
     )
 
+    def safe_report(self, level: Set[str], message: str) -> None:
+        """
+        Safely report a message, using Blender's report system if available, otherwise just logging.
+        This allows the class to work both as a Blender operator and in unit tests.
+        :param level: The report level (e.g., {'ERROR'}, {'WARNING'}, {'INFO'})
+        :param message: The message to report
+        """
+        if hasattr(self, 'report') and callable(getattr(self, 'report', None)):
+            self.report(level, message)
+        # If report is not available, the message has already been logged via the log module
+
     def execute(self, context: bpy.types.Context) -> Set[str]:
         """
         The main routine that reads out the 3MF file.
@@ -132,7 +143,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     document = xml.etree.ElementTree.ElementTree(file=model_file)
                 except xml.etree.ElementTree.ParseError as e:
                     log.error(f"3MF document in {path} is malformed: {str(e)}")
-                    self.report({'ERROR'}, f"3MF document in {path} is malformed: {str(e)}")
+                    self.safe_report({'ERROR'}, f"3MF document in {path} is malformed: {str(e)}")
                     continue
                 if document is None:
                     # This file is corrupt or we can't read it. There is no error code to communicate this to Blender
@@ -141,7 +152,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 root = document.getroot()
                 if not self.is_supported(root.attrib.get("requiredextensions", "")):
                     log.warning(f"3MF document in {path} requires unknown extensions.")
-                    self.report({'WARNING'}, f"3MF document in {path} requires unknown extensions.")
+                    self.safe_report({'WARNING'}, f"3MF document in {path} requires unknown extensions.")
                     # Still continue processing even though the spec says not to. Our aim is to retrieve whatever
                     # information we can.
 
@@ -181,7 +192,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                             bpy.ops.view3d.view_selected(override)
 
         log.info(f"Imported {self.num_loaded} objects from 3MF files.")
-        self.report({'INFO'}, f"Imported {self.num_loaded} objects from 3MF files")
+        self.safe_report({'INFO'}, f"Imported {self.num_loaded} objects from 3MF files")
 
         return {"FINISHED"}
 
@@ -211,7 +222,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         except (zipfile.BadZipFile, EnvironmentError) as e:
             # File is corrupt, or the OS prevents us from reading it (doesn't exist, no permissions, etc.)
             log.error(f"Unable to read archive: {e}")
-            self.report({'ERROR'}, f"Unable to read archive: {e}")
+            self.safe_report({'ERROR'}, f"Unable to read archive: {e}")
             return result
         return result
 
@@ -243,7 +254,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         f"{CONTENT_TYPES_LOCATION} has malformed XML"
                         f"(position {e.position[0]}:{e.position[1]})."
                     )
-                    self.report({'WARNING'}, f"{CONTENT_TYPES_LOCATION} has malformed XML at position {e.position[0]}:{e.position[1]}")
+                    self.safe_report({'WARNING'}, f"{CONTENT_TYPES_LOCATION} has malformed XML at position {e.position[0]}:{e.position[1]}")
                     root = None
 
                 if root is not None:
@@ -256,7 +267,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                             log.warning(
                                 "[Content_Types].xml malformed: Override node without path or MIME type."
                             )
-                            self.report({'WARNING'}, "[Content_Types].xml malformed: Override node without path or MIME type")
+                            self.safe_report({'WARNING'}, "[Content_Types].xml malformed: Override node without path or MIME type")
                             continue  # Ignore the broken one.
                         match_regex = re.compile(
                             re.escape(override_node.attrib["PartName"])
@@ -273,7 +284,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                             log.warning(
                                 "[Content_Types].xml malformed: Default node without extension or MIME type."
                             )
-                            self.report({'WARNING'}, "[Content_Types].xml malformed: Default node without extension or MIME type")
+                            self.safe_report({'WARNING'}, "[Content_Types].xml malformed: Default node without extension or MIME type")
                             continue  # Ignore the broken one.
                         match_regex = re.compile(
                             rf".*\.{re.escape(default_node.attrib['Extension'])}"
@@ -281,7 +292,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         result.append((match_regex, default_node.attrib["ContentType"]))
         except KeyError:  # ZipFile reports that the content types file doesn't exist.
             log.warning(f"{CONTENT_TYPES_LOCATION} file missing!")
-            self.report({'WARNING'}, f"{CONTENT_TYPES_LOCATION} file missing")
+            self.safe_report({'WARNING'}, f"{CONTENT_TYPES_LOCATION} file missing")
 
         # This parser should be robust to slightly broken files and retrieve what we can.
         # In case the document is broken or missing, here we'll append the default ones for 3MF.
@@ -433,7 +444,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         for metadata_node in node.iterfind("./3mf:metadata", MODEL_NAMESPACES):
             if "name" not in metadata_node.attrib:
                 log.warning("Metadata entry without name is discarded.")
-                self.report({'WARNING'}, "Metadata entry without name is discarded")
+                self.safe_report({'WARNING'}, "Metadata entry without name is discarded")
                 continue  # This attribute has no name, so there's no key by which I can save the metadata.
             name = metadata_node.attrib["name"]
             preserve_str = metadata_node.attrib.get("preserve", "0")
@@ -464,11 +475,11 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 material_id = basematerials_item.attrib["id"]
             except KeyError:
                 log.warning("Encountered a basematerials item without resource ID.")
-                self.report({'WARNING'}, "Encountered a basematerials item without resource ID")
+                self.safe_report({'WARNING'}, "Encountered a basematerials item without resource ID")
                 continue  # Need to have an ID, or no item can reference to the materials. Skip this one.
             if material_id in self.resource_materials:
                 log.warning(f"Duplicate material ID: {material_id}")
-                self.report({'WARNING'}, f"Duplicate material ID: {material_id}")
+                self.safe_report({'WARNING'}, f"Duplicate material ID: {material_id}")
                 continue
 
             # Use a dictionary mapping indices to resources, because some indices may be skipped due to being invalid.
@@ -511,7 +522,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         log.warning(
                             f"Invalid color for material {name} of resource {material_id}: {color}"
                         )
-                        self.report({'WARNING'}, f"Invalid color for material {name} of resource {material_id}: {color}")
+                        self.safe_report({'WARNING'}, f"Invalid color for material {name} of resource {material_id}: {color}")
                         color = None  # Don't add a color for this material.
 
                 # Input is valid. Create a resource.
@@ -539,7 +550,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 objectid = object_node.attrib["id"]
             except KeyError:
                 log.warning("Object resource without ID!")
-                self.report({'WARNING'}, "Object resource without ID")
+                self.safe_report({'WARNING'}, "Object resource without ID")
                 continue  # ID is required, otherwise the build can't refer to it.
 
             pid = object_node.attrib.get("pid")  # Material ID.
@@ -556,12 +567,12 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         f"Object with ID {objectid} refers to material collection {pid} with index {pindex}"
                         f" which doesn't exist."
                     )
-                    self.report({'WARNING'}, f"Object with ID {objectid} refers to material collection {pid} with index {pindex} which doesn't exist")
+                    self.safe_report({'WARNING'}, f"Object with ID {objectid} refers to material collection {pid} with index {pindex} which doesn't exist")
                 except ValueError:
                     log.warning(
                         f"Object with ID {objectid} specifies material index {pindex}, which is not integer."
                     )
-                    self.report({'WARNING'}, f"Object with ID {objectid} specifies material index {pindex}, which is not integer")
+                    self.safe_report({'WARNING'}, f"Object with ID {objectid} specifies material index {pindex}, which is not integer")
 
             vertices = self.read_vertices(object_node)
             triangles, materials = self.read_triangles(object_node, material, pid)
@@ -613,19 +624,19 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 x = float(attrib.get("x", 0))
             except ValueError:  # Not a float.
                 log.warning("Vertex missing X coordinate.")
-                self.report({'WARNING'}, "Vertex missing X coordinate")
+                self.safe_report({'WARNING'}, "Vertex missing X coordinate")
                 x = 0
             try:
                 y = float(attrib.get("y", 0))
             except ValueError:
                 log.warning("Vertex missing Y coordinate.")
-                self.report({'WARNING'}, "Vertex missing Y coordinate")
+                self.safe_report({'WARNING'}, "Vertex missing Y coordinate")
                 y = 0
             try:
                 z = float(attrib.get("z", 0))
             except ValueError:
                 log.warning("Vertex missing Z coordinate.")
-                self.report({'WARNING'}, "Vertex missing Z coordinate")
+                self.safe_report({'WARNING'}, "Vertex missing Z coordinate")
                 z = 0
             result.append((x, y, z))
         return result
@@ -658,7 +669,7 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 v3 = int(attrib["v3"])
                 if v1 < 0 or v2 < 0 or v3 < 0:  # Negative indices are not allowed.
                     log.warning("Triangle containing negative index to vertex list.")
-                    self.report({'WARNING'}, "Triangle containing negative index to vertex list")
+                    self.safe_report({'WARNING'}, "Triangle containing negative index to vertex list")
                     continue
 
                 pid = attrib.get("pid", material_pid)
@@ -671,22 +682,22 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     except KeyError as e:
                         # Sorry. It's hard to give an exception more specific than this.
                         log.warning(f"Material {e} is missing.")
-                        self.report({'WARNING'}, f"Material {e} is missing")
+                        self.safe_report({'WARNING'}, f"Material {e} is missing")
                         material = default_material
                     except ValueError as e:
                         log.warning(f"Material index is not an integer: {e}")
-                        self.report({'WARNING'}, f"Material index is not an integer: {e}")
+                        self.safe_report({'WARNING'}, f"Material index is not an integer: {e}")
                         material = default_material
 
                 vertices.append((v1, v2, v3))
                 materials.append(material)
             except KeyError as e:
                 log.warning(f"Vertex {e} is missing.")
-                self.report({'WARNING'}, f"Vertex {e} is missing")
+                self.safe_report({'WARNING'}, f"Vertex {e} is missing")
                 continue
             except ValueError as e:
                 log.warning(f"Vertex reference is not an integer: {e}")
-                self.report({'WARNING'}, f"Vertex reference is not an integer: {e}")
+                self.safe_report({'WARNING'}, f"Vertex reference is not an integer: {e}")
                 continue  # No fallback this time. Leave out the entire triangle.
         return vertices, materials
 
@@ -910,3 +921,4 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 parent=blender_object,
             )
             objectid_stack_trace.pop()
+

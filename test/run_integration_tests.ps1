@@ -99,8 +99,8 @@ if (-not (Test-Path $testScript)) {
     exit 1
 }
 
-# Function to run tests against a single Blender version
-function Run-TestsForBlender {
+# Function to invoke tests against a single Blender version
+function Invoke-TestsForBlender {
     param(
         [string]$BlenderExe,
         [bool]$VerboseOutput
@@ -180,7 +180,7 @@ $failedTests = 0
 $results = @()
 
 foreach ($blender in $blendersToTest) {
-    $exitCode = Run-TestsForBlender -BlenderExe $blender -VerboseOutput $Verbose
+    $exitCode = Invoke-TestsForBlender -BlenderExe $blender -VerboseOutput $Verbose
     
     $versionStr = & $blender --version 2>&1 | Select-Object -First 1
     

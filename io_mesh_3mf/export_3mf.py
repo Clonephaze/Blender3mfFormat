@@ -78,6 +78,17 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         max=12,
     )
 
+    def safe_report(self, level: Set[str], message: str) -> None:
+        """
+        Safely report a message, using Blender's report system if available, otherwise just logging.
+        This allows the class to work both as a Blender operator and in unit tests.
+        :param level: The report level (e.g., {'ERROR'}, {'WARNING'}, {'INFO'})
+        :param message: The message to report
+        """
+        if hasattr(self, 'report') and callable(getattr(self, 'report', None)):
+            self.report(level, message)
+        # If report is not available, the message has already been logged via the log module
+
     def execute(self, context: bpy.types.Context) -> Set[str]:
         """
         The main routine that writes the 3MF archive.
@@ -131,11 +142,11 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             archive.close()
         except EnvironmentError as e:
             log.error(f"Unable to complete writing to 3MF archive: {e}")
-            self.report({'ERROR'}, f"Unable to complete writing to 3MF archive: {e}")
+            self.safe_report({'ERROR'}, f"Unable to complete writing to 3MF archive: {e}")
             return {"CANCELLED"}
 
         log.info(f"Exported {self.num_written} objects to 3MF archive {self.filepath}.")
-        self.report({'INFO'}, f"Exported {self.num_written} objects to {self.filepath}")
+        self.safe_report({'INFO'}, f"Exported {self.num_written} objects to {self.filepath}")
         return {"FINISHED"}
 
     # The rest of the functions are in order of when they are called.
@@ -161,7 +172,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             self.must_preserve(archive)
         except EnvironmentError as e:
             log.error(f"Unable to write 3MF archive to {filepath}: {e}")
-            self.report({'ERROR'}, f"Unable to write 3MF archive to {filepath}: {e}")
+            self.safe_report({'ERROR'}, f"Unable to write 3MF archive to {filepath}: {e}")
             return None
 
         return archive
@@ -619,3 +630,4 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         if formatted == "":
             return "0"
         return formatted
+
