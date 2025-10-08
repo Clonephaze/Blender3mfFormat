@@ -27,4 +27,4 @@ jobs:
       - name: Test
         run: python3 -m unittest test
       - name: Code style
-        run: python3 -m pycodestyle --ignore=E402 --max-line-length=120 .
+        run: python3 -m pycodestyle --ignore=E402,W503 --max-line-length=120 . # W503 is ignored because it conflicts with PEP8's recommendation to break before binary operators.    

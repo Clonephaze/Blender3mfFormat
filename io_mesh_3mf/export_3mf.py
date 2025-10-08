@@ -192,7 +192,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             if contents == conflicting_mustpreserve_contents:
                 continue  # This file was in conflict. Don't preserve any copy of it then.
             contents = base64.b85decode(contents.encode("UTF-8"))
-            filename = filename[len(".3mf_preserved/") :]
+            filename = filename[len(".3mf_preserved/"):]
             with archive.open(filename, "w") as f:
                 f.write(contents)
 
@@ -218,8 +218,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         return scale
 
-    def write_materials(self, resources_element: xml.etree.ElementTree.Element, 
-                       blender_objects: List[bpy.types.Object]) -> Dict[str, int]:
+    def write_materials(self, resources_element: xml.etree.ElementTree.Element,
+                        blender_objects: List[bpy.types.Object]) -> Dict[str, int]:
         """
         Write the materials on the specified blender objects to a 3MF document.
 
@@ -287,10 +287,10 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         return name_to_index
 
-    def write_objects(self, root: xml.etree.ElementTree.Element, 
-                     resources_element: xml.etree.ElementTree.Element, 
-                     blender_objects: List[bpy.types.Object], 
-                     global_scale: float) -> None:
+    def write_objects(self, root: xml.etree.ElementTree.Element,
+                      resources_element: xml.etree.ElementTree.Element,
+                      blender_objects: List[bpy.types.Object],
+                      global_scale: float) -> None:
         """
         Writes a group of objects into the 3MF archive.
         :param root: An XML root element to write the objects into.
@@ -337,8 +337,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 )
                 self.write_metadata(metadatagroup_element, metadata)
 
-    def write_object_resource(self, resources_element: xml.etree.ElementTree.Element, 
-                             blender_object: bpy.types.Object) -> Tuple[int, mathutils.Matrix]:
+    def write_object_resource(self, resources_element: xml.etree.ElementTree.Element,
+                              blender_object: bpy.types.Object) -> Tuple[int, mathutils.Matrix]:
         """
         Write a single Blender object and all of its children to the resources of a 3MF document.
 
@@ -538,8 +538,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         ]
         return " ".join(formatted_cells)
 
-    def write_vertices(self, mesh_element: xml.etree.ElementTree.Element, 
-                      vertices: List[bpy.types.MeshVertex]) -> None:
+    def write_vertices(self, mesh_element: xml.etree.ElementTree.Element,
+                       vertices: List[bpy.types.MeshVertex]) -> None:
         """
         Writes a list of vertices into the specified mesh element.
 
@@ -572,9 +572,9 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             )
 
     def write_triangles(
-        self, mesh_element: xml.etree.ElementTree.Element, 
-        triangles: List[bpy.types.MeshLoopTriangle], 
-        object_material_list_index: int, 
+        self, mesh_element: xml.etree.ElementTree.Element,
+        triangles: List[bpy.types.MeshLoopTriangle],
+        object_material_list_index: int,
         material_slots: List[bpy.types.MaterialSlot]
     ) -> None:
         """
@@ -630,4 +630,3 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         if formatted == "":
             return "0"
         return formatted
-

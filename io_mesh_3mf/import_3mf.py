@@ -254,7 +254,10 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         f"{CONTENT_TYPES_LOCATION} has malformed XML"
                         f"(position {e.position[0]}:{e.position[1]})."
                     )
-                    self.safe_report({'WARNING'}, f"{CONTENT_TYPES_LOCATION} has malformed XML at position {e.position[0]}:{e.position[1]}")
+                    self.safe_report(
+                        {'WARNING'},
+                        f"{CONTENT_TYPES_LOCATION} has malformed XML at position {e.position[0]}:{e.position[1]}"
+                    )
                     root = None
 
                 if root is not None:
@@ -267,7 +270,10 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                             log.warning(
                                 "[Content_Types].xml malformed: Override node without path or MIME type."
                             )
-                            self.safe_report({'WARNING'}, "[Content_Types].xml malformed: Override node without path or MIME type")
+                            self.safe_report(
+                                {'WARNING'},
+                                "[Content_Types].xml malformed: Override node without path or MIME type"
+                            )
                             continue  # Ignore the broken one.
                         match_regex = re.compile(
                             re.escape(override_node.attrib["PartName"])
@@ -284,7 +290,10 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                             log.warning(
                                 "[Content_Types].xml malformed: Default node without extension or MIME type."
                             )
-                            self.safe_report({'WARNING'}, "[Content_Types].xml malformed: Default node without extension or MIME type")
+                            self.safe_report(
+                                {'WARNING'},
+                                "[Content_Types].xml malformed: Default node without extension or MIME type"
+                            )
                             continue  # Ignore the broken one.
                         match_regex = re.compile(
                             rf".*\.{re.escape(default_node.attrib['Extension'])}"
@@ -302,8 +311,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return result
 
-    def assign_content_types(self, archive: zipfile.ZipFile, 
-                            content_types: List[Tuple[Pattern[str], str]]) -> Dict[str, str]:
+    def assign_content_types(self, archive: zipfile.ZipFile,
+                             content_types: List[Tuple[Pattern[str], str]]) -> Dict[str, str]:
         """
         Assign a MIME type to each file in the archive.
 
@@ -328,8 +337,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return result
 
-    def must_preserve(self, files_by_content_type: Dict[str, List[IO[bytes]]], 
-                     annotations: Annotations) -> None:
+    def must_preserve(self, files_by_content_type: Dict[str, List[IO[bytes]]],
+                      annotations: Annotations) -> None:
         """
         Preserves files that are marked with the 'MustPreserve' relationship and PrintTickets.
 
@@ -402,8 +411,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         extensions = set(filter(lambda x: x != "", extensions))
         return extensions <= SUPPORTED_EXTENSIONS
 
-    def unit_scale(self, context: bpy.types.Context, 
-                  root: xml.etree.ElementTree.Element) -> float:
+    def unit_scale(self, context: bpy.types.Context,
+                   root: xml.etree.ElementTree.Element) -> float:
         """
         Get the scaling factor we need to use for this document, according to its unit.
         :param context: The Blender context.
@@ -426,8 +435,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         return scale
 
-    def read_metadata(self, node: xml.etree.ElementTree.Element, 
-                     original_metadata: Optional[Metadata] = None) -> Metadata:
+    def read_metadata(self, node: xml.etree.ElementTree.Element,
+                      original_metadata: Optional[Metadata] = None) -> Metadata:
         """
         Reads the metadata tags from a metadata group.
         :param node: A node in the 3MF document that contains <metadata> tags. This can be either a root node, or a
@@ -522,7 +531,8 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         log.warning(
                             f"Invalid color for material {name} of resource {material_id}: {color}"
                         )
-                        self.safe_report({'WARNING'}, f"Invalid color for material {name} of resource {material_id}: {color}")
+                        self.safe_report({'WARNING'},
+                                         f"Invalid color for material {name} of resource {material_id}: {color}")
                         color = None  # Don't add a color for this material.
 
                 # Input is valid. Create a resource.
@@ -567,12 +577,18 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         f"Object with ID {objectid} refers to material collection {pid} with index {pindex}"
                         f" which doesn't exist."
                     )
-                    self.safe_report({'WARNING'}, f"Object with ID {objectid} refers to material collection {pid} with index {pindex} which doesn't exist")
+                    self.safe_report(
+                        {'WARNING'},
+                        f"Object with ID {objectid} refers to material collection {pid} "
+                        f"with index {pindex} which doesn't exist"
+                    )
                 except ValueError:
                     log.warning(
                         f"Object with ID {objectid} specifies material index {pindex}, which is not integer."
                     )
-                    self.safe_report({'WARNING'}, f"Object with ID {objectid} specifies material index {pindex}, which is not integer")
+                    self.safe_report(
+                        {'WARNING'},
+                        f"Object with ID {objectid} specifies material index {pindex}, which is not integer")
 
             vertices = self.read_vertices(object_node)
             triangles, materials = self.read_triangles(object_node, material, pid)
@@ -641,9 +657,9 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             result.append((x, y, z))
         return result
 
-    def read_triangles(self, object_node: xml.etree.ElementTree.Element, 
-                      default_material: Optional[int], 
-                      material_pid: Optional[int]) -> Tuple[List[Tuple[int, int, int]], List[Optional[int]]]:
+    def read_triangles(self, object_node: xml.etree.ElementTree.Element,
+                       default_material: Optional[int],
+                       material_pid: Optional[int]) -> Tuple[List[Tuple[int, int, int]], List[Optional[int]]]:
         """
         Reads out the triangles from an XML node of an object.
 
@@ -921,4 +937,3 @@ class Import3MF(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 parent=blender_object,
             )
             objectid_stack_trace.pop()
-

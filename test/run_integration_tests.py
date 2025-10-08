@@ -9,6 +9,7 @@ Copyright (C) 2025 Jack
 Licensed under GPL v2+
 """
 
+import bpy
 import sys
 import os
 import tempfile
@@ -19,8 +20,6 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent
 ADDON_DIR = SCRIPT_DIR.parent / "io_mesh_3mf"
 sys.path.insert(0, str(ADDON_DIR.parent))
-
-import bpy
 
 
 class TestBlenderEnvironment(unittest.TestCase):
@@ -275,8 +274,8 @@ class TestBasicImport(unittest.TestCase):
         # This test file is minimal (only 3dmodel.model, no [Content_Types].xml)
         # The addon handles this gracefully with a warning
         # This demonstrates robust error handling - import completes even if file is malformed
-        self.assertIn("FINISHED", result, 
-                     "Should handle minimal test resource gracefully without crashing")
+        self.assertIn("FINISHED", result,
+                      "Should handle minimal test resource gracefully without crashing")
         # Note: This minimal file may not import any objects (missing metadata)
         # but the important thing is it doesn't crash
         print(f"✓ Minimal test resource handled gracefully ({len(bpy.data.objects)} objects imported)")
@@ -333,7 +332,7 @@ class TestRoundTrip(unittest.TestCase):
         imported_obj = bpy.data.objects[0]
         imported_verts = len(imported_obj.data.vertices)
         self.assertEqual(
-            imported_verts, original_verts, 
+            imported_verts, original_verts,
             f"Vertex count mismatch: original={original_verts}, imported={imported_verts}"
         )
         print(f"✓ Round-trip successful: {original_verts} verts -> {imported_verts} verts")
@@ -362,7 +361,7 @@ class TestRoundTrip(unittest.TestCase):
 
         # Check material exists
         self.assertGreater(len(bpy.data.materials), 0, "No materials imported")
-        
+
         imported_mat = bpy.data.materials[0]
         if imported_mat.use_nodes:
             principled = imported_mat.node_tree.nodes.get("Principled BSDF")
@@ -403,7 +402,7 @@ class TestAPICompatibility(unittest.TestCase):
 
         # Wrap it
         wrapper = PrincipledBSDFWrapper(mat, is_readonly=True)
-        
+
         # Test access to properties
         color = wrapper.base_color
         self.assertIsNotNone(color, "base_color should not be None")
@@ -440,12 +439,12 @@ class TestAPICompatibility(unittest.TestCase):
 
         # Calculate loop triangles
         mesh.calc_loop_triangles()
-        
+
         self.assertGreater(
-            len(mesh.loop_triangles), 0, 
+            len(mesh.loop_triangles), 0,
             "Should have loop triangles after calc"
         )
-        
+
         # Check triangle structure
         tri = mesh.loop_triangles[0]
         self.assertEqual(len(tri.vertices), 3, "Triangle should have 3 vertices")
