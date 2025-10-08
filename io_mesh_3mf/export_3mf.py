@@ -4,6 +4,7 @@ import itertools
 import logging  # To debug and log progress.
 import xml.etree.ElementTree  # To write XML documents with the 3D model data.
 import zipfile  # To write zip archives, the shell of the 3MF file.
+from typing import Optional, Dict, Set, List, Tuple
 
 import bpy  # The Blender API.
 import bpy.props  # To define metadata properties for the operator.
@@ -37,6 +38,8 @@ from .unit_conversions import blender_to_metre, threemf_to_metre
 
 # <pep8 compliant>
 
+# IDE and Documentation support.
+__all__ = ["Export3MF"]
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +78,18 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         max=12,
     )
 
-    def execute(self, context):
+    def safe_report(self, level: Set[str], message: str) -> None:
+        """
+        Safely report a message, using Blender's report system if available, otherwise just logging.
+        This allows the class to work both as a Blender operator and in unit tests.
+        :param level: The report level (e.g., {'ERROR'}, {'WARNING'}, {'INFO'})
+        :param message: The message to report
+        """
+        if hasattr(self, 'report') and callable(getattr(self, 'report', None)):
+            self.report(level, message)
+        # If report is not available, the message has already been logged via the log module
+
+    def execute(self, context: bpy.types.Context) -> Set[str]:
         """
         The main routine that writes the 3MF archive.
 
@@ -128,14 +142,16 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             archive.close()
         except EnvironmentError as e:
             log.error(f"Unable to complete writing to 3MF archive: {e}")
+            self.safe_report({'ERROR'}, f"Unable to complete writing to 3MF archive: {e}")
             return {"CANCELLED"}
 
         log.info(f"Exported {self.num_written} objects to 3MF archive {self.filepath}.")
+        self.safe_report({'INFO'}, f"Exported {self.num_written} objects to {self.filepath}")
         return {"FINISHED"}
 
     # The rest of the functions are in order of when they are called.
 
-    def create_archive(self, filepath):
+    def create_archive(self, filepath: str) -> Optional[zipfile.ZipFile]:
         """
         Creates an empty 3MF archive.
 
@@ -156,11 +172,12 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             self.must_preserve(archive)
         except EnvironmentError as e:
             log.error(f"Unable to write 3MF archive to {filepath}: {e}")
+            self.safe_report({'ERROR'}, f"Unable to write 3MF archive to {filepath}: {e}")
             return None
 
         return archive
 
-    def must_preserve(self, archive):
+    def must_preserve(self, archive: zipfile.ZipFile) -> None:
         """
         Write files that must be preserved to the archive.
 
@@ -175,11 +192,11 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             if contents == conflicting_mustpreserve_contents:
                 continue  # This file was in conflict. Don't preserve any copy of it then.
             contents = base64.b85decode(contents.encode("UTF-8"))
-            filename = filename[len(".3mf_preserved/") :]
+            filename = filename[len(".3mf_preserved/"):]
             with archive.open(filename, "w") as f:
                 f.write(contents)
 
-    def unit_scale(self, context):
+    def unit_scale(self, context: bpy.types.Context) -> float:
         """
         Get the scaling factor we need to transform the document to millimetres.
         :param context: The Blender context to get the unit from.
@@ -201,7 +218,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         return scale
 
-    def write_materials(self, resources_element, blender_objects):
+    def write_materials(self, resources_element: xml.etree.ElementTree.Element,
+                        blender_objects: List[bpy.types.Object]) -> Dict[str, int]:
         """
         Write the materials on the specified blender objects to a 3MF document.
 
@@ -269,7 +287,10 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         return name_to_index
 
-    def write_objects(self, root, resources_element, blender_objects, global_scale):
+    def write_objects(self, root: xml.etree.ElementTree.Element,
+                      resources_element: xml.etree.ElementTree.Element,
+                      blender_objects: List[bpy.types.Object],
+                      global_scale: float) -> None:
         """
         Writes a group of objects into the 3MF archive.
         :param root: An XML root element to write the objects into.
@@ -316,7 +337,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 )
                 self.write_metadata(metadatagroup_element, metadata)
 
-    def write_object_resource(self, resources_element, blender_object):
+    def write_object_resource(self, resources_element: xml.etree.ElementTree.Element,
+                              blender_object: bpy.types.Object) -> Tuple[int, mathutils.Matrix]:
         """
         Write a single Blender object and all of its children to the resources of a 3MF document.
 
@@ -481,7 +503,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         return new_resource_id, mesh_transformation
 
-    def write_metadata(self, node, metadata):
+    def write_metadata(self, node: xml.etree.ElementTree.Element, metadata: Metadata) -> None:
         """
         Writes metadata from a metadata storage into an XML node.
         :param node: The node to add <metadata> tags to.
@@ -500,7 +522,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 )
             metadata_node.text = metadata_entry.value
 
-    def format_transformation(self, transformation):
+    def format_transformation(self, transformation: mathutils.Matrix) -> str:
         """
         Formats a transformation matrix in 3MF's formatting.
 
@@ -511,14 +533,13 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         pieces = (
             row[:3] for row in transformation.transposed()
         )  # Don't convert the 4th column.
-        result = ""
-        for cell in itertools.chain.from_iterable(pieces):
-            if result != "":  # First loop, don't put a space in.
-                result += " "
-            result += self.format_number(cell, 6)  # Never use scientific notation!
-        return result
+        formatted_cells = [
+            self.format_number(cell, 6) for cell in itertools.chain.from_iterable(pieces)
+        ]
+        return " ".join(formatted_cells)
 
-    def write_vertices(self, mesh_element, vertices):
+    def write_vertices(self, mesh_element: xml.etree.ElementTree.Element,
+                       vertices: List[bpy.types.MeshVertex]) -> None:
         """
         Writes a list of vertices into the specified mesh element.
 
@@ -551,8 +572,11 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             )
 
     def write_triangles(
-        self, mesh_element, triangles, object_material_list_index, material_slots
-    ):
+        self, mesh_element: xml.etree.ElementTree.Element,
+        triangles: List[bpy.types.MeshLoopTriangle],
+        object_material_list_index: int,
+        material_slots: List[bpy.types.MaterialSlot]
+    ) -> None:
         """
         Writes a list of triangles into the specified mesh element.
 
@@ -592,7 +616,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                     # Not equal to the index that our parent object was written with, so we must override it here.
                     triangle_element.attrib[p1_name] = str(material_index)
 
-    def format_number(self, number, decimals):
+    def format_number(self, number: float, decimals: int) -> str:
         """
         Properly formats a floating point number to a certain precision.
 
@@ -602,9 +626,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         :param decimals: The maximum number of places after the radix to write.
         :return: A string representing that number.
         """
-        formatted = (
-            ("{:." + str(decimals) + "f}").format(number).rstrip("0").rstrip(".")
-        )
+        formatted = f"{number:.{decimals}f}".rstrip("0").rstrip(".")
         if formatted == "":
             return "0"
         return formatted

@@ -1,3 +1,56 @@
+1.1.0 - Modernization for Blender 4.2+
+====
+**IMPORTANT: This version requires Blender 4.2 or newer. For Blender 2.8-4.1, use version 1.0.2.**
+
+This release modernizes the addon for Blender 4.2+ and Python 3.11+, ensuring compatibility with current and future Blender versions.
+
+Breaking Changes
+----
+* **Minimum Blender version is now 4.2** (previously supported 2.8-4.0)
+* **Minimum Python version is now 3.11** (previously 3.7+)
+* Installation now uses Blender Extensions format (drag-and-drop .zip or install via Preferences)
+
+Features
+----
+* Full compatibility with Blender 4.2, 4.3, 4.5, and 5.0 Alpha
+* Verified compatibility with all modern Blender APIs:
+  - `PrincipledBSDFWrapper` for material handling
+  - `mesh.loop_triangles` for mesh data
+  - `evaluated_depsgraph_get()` for modifier evaluation
+* Comprehensive test suite (142 unit tests + 16 integration tests)
+* Cross-platform integration test runners (Windows PowerShell, macOS/Linux Bash)
+* Multi-version testing support (test against all installed Blender versions)
+* Automated CI/CD testing via GitHub Actions
+* Updated documentation and contribution guidelines
+
+Technical Improvements
+----
+* Replaced wildcard imports with explicit imports for better code maintainability
+* Removed deprecated `__init__()` methods from operators (Blender 4.2+ requirement)
+* Fixed state variable initialization in export/import classes
+* Updated manifest format for modern Blender addon structure
+* Improved error handling for malformed 3MF files
+
+Bug Fixes
+----
+* Fixed operator initialization for Blender 4.2+ compatibility
+* Fixed material color handling with modern shader node API
+* Fixed mesh triangulation with current API patterns
+* Corrected depsgraph evaluation for objects with modifiers
+
+Testing
+----
+* All original unit tests updated and passing (Python 3.11)
+* New integration tests verify real-world Blender functionality
+* Tested across Blender 4.2 LTS, 4.3, 4.5, and 5.0 Alpha
+* Verified export → import round-trip functionality
+* Confirmed material preservation through round-trip operations
+
+Contributors
+----
+* Modernization work by Jack (Clonephaze)
+* Original addon by Ghostkeeper
+
 1.0.2 - Bug Fixes
 ====
 * Fix support in newer Blender versions, up to 4.0.

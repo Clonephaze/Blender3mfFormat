@@ -28,7 +28,19 @@ bpy.types.Operator = MockOperator
 bpy_extras.io_utils.ImportHelper = MockImportHelper
 bpy_extras.io_utils.ExportHelper = MockExportHelper
 import io_mesh_3mf.annotations  # Now finally we can import the unit under test.
-from io_mesh_3mf.constants import *
+# from io_mesh_3mf.constants import *  ##Annotated out to use explicit imports below.
+from io_mesh_3mf.constants import (
+    RELS_NAMESPACE,
+    RELS_NAMESPACES,
+    RELS_RELATIONSHIP_FIND,
+    RELS_MIMETYPE,
+    RELS_FOLDER,
+    THUMBNAIL_REL,
+    MODEL_LOCATION,
+    MODEL_REL,
+    MODEL_MIMETYPE,
+    CONTENT_TYPES_NAMESPACES
+)
 
 
 class TestAnnotations(unittest.TestCase):

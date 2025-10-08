@@ -31,7 +31,13 @@ bpy_extras.io_utils.ImportHelper = MockImportHelper
 bpy_extras.io_utils.ExportHelper = MockExportHelper
 bpy_extras.node_shader_utils.PrincipledBSDFWrapper = MockPrincipledBSDFWrapper
 import io_mesh_3mf.export_3mf  # Now we may safely import the unit under test.
-from io_mesh_3mf.constants import *
+# from io_mesh_3mf.constants import * ## Annotated out to use explicict imports below
+from io_mesh_3mf.constants import (
+    RELS_FOLDER,
+    CONTENT_TYPES_LOCATION,
+    MODEL_NAMESPACE,
+    MODEL_NAMESPACES
+)
 from io_mesh_3mf.metadata import MetadataEntry
 
 
@@ -47,6 +53,12 @@ class TestExport3MF(unittest.TestCase):
         self.exporter = io_mesh_3mf.export_3mf.Export3MF()  # An exporter class.
         self.exporter.use_mesh_modifiers = False
         self.exporter.coordinate_precision = 4
+
+        # Initialize state variables that are normally set in execute()
+        self.exporter.next_resource_id = 1
+        self.exporter.material_resource_id = -1
+        self.exporter.num_written = 0
+        self.exporter.material_name_to_index = {}
 
         self.mock_triangle_loop = unittest.mock.MagicMock()
         self.mock_triangle_loop.material_index = 0

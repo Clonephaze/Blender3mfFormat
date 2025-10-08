@@ -25,19 +25,27 @@ import bpy.utils  # To (un)register the add-on.
 from .export_3mf import Export3MF  # Exports 3MF files.
 from .import_3mf import Import3MF  # Imports 3MF files.
 
+# IDE and Documentation support.
+__all__ = [
+    "Export3MF",
+    "Import3MF",
+    "register",
+    "unregister",
+]
+
 """
 Import and export 3MF files in Blender.
 """
 
 
-def menu_import(self, _):
+def menu_import(self, _) -> None:
     """
     Calls the 3MF import operator from the menu item.
     """
     self.layout.operator(Import3MF.bl_idname, text="3D Manufacturing Format (.3mf)")
 
 
-def menu_export(self, _):
+def menu_export(self, _) -> None:
     """
     Calls the 3MF export operator from the menu item.
     """
@@ -47,7 +55,7 @@ def menu_export(self, _):
 classes = (Import3MF, Export3MF)
 
 
-def register():
+def register() -> None:
     for cls in classes:
         bpy.utils.register_class(cls)
 
@@ -55,7 +63,7 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_export)
 
 
-def unregister():
+def unregister() -> None:
     for cls in classes:
         bpy.utils.unregister_class(cls)
 

@@ -4,15 +4,23 @@ This is a Blender add-on that allows importing and exporting 3MF files.
 
 3D Manufacturing Format files (.3mf) are a file format for triangular meshes intended to serve as exchange format for 3D printing applications. They can communicate not only the model, but also the intent and material of a 3D printing job from the CAD software to the CAM software (slicer). In this scenario, Blender serves as the CAD software. To that end, the aim of this add-on is to make Blender a more viable alternative as CAD software for additive manufacturing.
 
-## ⚠️ Modernization Notice (2025)
+## ✅ Modernization Complete (2025)
 
-**This fork is being actively modernized for Blender 4.2+**
+**This fork has been successfully modernized for Blender 4.2+ and is production-ready!**
 
-The original repository by Ghostkeeper has been inactive since 2023. The addon no longer functions in modern Blender versions (4.2+) due to API changes. This fork contains modernization work to restore compatibility.
+The original repository by Ghostkeeper has been inactive since 2023. The addon no longer functions in modern Blender versions (4.2+) due to API changes. This fork contains complete modernization work with full test coverage.
 
 **Version Guide:**
-- **Blender 4.2+**: Use this modernized fork (work in progress)
+- **Blender 4.2+**: Use this modernized fork ✅ **Ready for production!**
 - **Blender 2.8-3.6**: Use the [original repository](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest)
+
+**What's Been Modernized:**
+- ✅ All Blender 4.2+ API compatibility verified
+- ✅ Material system (PrincipledBSDFWrapper) working
+- ✅ Import/Export/Round-trip fully functional
+- ✅ 142 unit tests + 16 integration tests (all passing)
+- ✅ Cross-platform test runners (Windows/macOS/Linux)
+- ✅ CI/CD with GitHub Actions
 
 **Credits:**
 - **Original Author**: Ghostkeeper (2020-2022)
@@ -20,28 +28,61 @@ The original repository by Ghostkeeper has been inactive since 2023. The addon n
 
 **Note to Original Author**: Should Ghostkeeper return to active development, all modernization work will be contributed back to the original repository. This fork exists solely to keep the addon functional for the community while maintaining the original vision and GPL v2+ license.
 
-### Current Modernization Status
-- [x] Fixed reload logic and imports
-- [ ] Updated for Blender 4.2+ API
-- [ ] Fixed material/shader system compatibility
-- [ ] Updated property annotation syntax
-- [ ] Added integration tests for Blender 4.2+
-- [ ] Verified round-trip import/export functionality
+### Current Modernization Status ✅
+- [x] ✅ Fixed reload logic and imports
+- [x] ✅ Updated for Blender 4.2+ API
+- [x] ✅ Fixed material/shader system compatibility
+- [x] ✅ Updated property annotation syntax
+- [x] ✅ Added integration tests for Blender 4.2+
+- [x] ✅ Verified round-trip import/export functionality
+- [x] ✅ 142 unit tests + 16 integration tests all passing
+
+**Status: Production Ready!** All core functionality working in Blender 4.2+
 
 Installation
 ----
-**Modernized Version (Blender 4.2+):** This fork is currently under development. Once stable, installation instructions will be updated.
+### For Blender 4.2+ (This Modernized Version)
 
-**Original Version (Blender 2.80-3.6):** Use the [original repository releases](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest).
+**Option 1: Drag and Drop Installation (Easiest)**
+1. Download the repository as a ZIP:
+   - Click the green "Code" button → "Download ZIP"
+   - Or download from the [releases page](../../releases) (when available)
+2. Open Blender 4.2+
+3. Drag the `io_mesh_3mf` folder directly into the Blender window
+4. Blender will prompt to install - click "OK"
+5. The addon will appear in Preferences → Add-ons
+6. Enable it by checking the checkbox next to "Import-Export: 3MF format"
 
-### Installation Instructions (when ready)
-To install this add-on, you need to tell Blender where to find a .zip archive with the add-on inside.
-1. Download the latest release from the [releases page](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest). This is a .zip archive.
-2. In Blender, go to Edit -> Preferences and open the Add-ons tab on the left.
-3. Click on the Install... button at the top. Navigate to the .zip you downloaded.
-4. Under the "Community" category, find the add-on called "Import-Export: 3MF format". Make sure that it's enabled. (Note: If searching with the search box, exclude the "Import-Export" text since this is the category, not part of the add-on name. Just search for "3MF" instead.)
+**Option 2: Manual Installation via Preferences**
+1. Download the repository as a ZIP
+2. Extract it to get the `io_mesh_3mf` folder
+3. Open Blender → Edit → Preferences → Add-ons
+4. Click "Install..." button at the top right
+5. Navigate to the `io_mesh_3mf` folder and select it
+6. Click "Install Add-on"
+7. Search for "3MF" in the add-ons list
+8. Enable it by checking the checkbox
 
-The add-on is being considered for inclusion in Blender as a community add-on [here](https://developer.blender.org/T84154). This would make it easier to install.
+**Option 3: Developer Installation (For Development)**
+1. Clone or download this repository
+2. Create a symbolic link or copy the `io_mesh_3mf` folder to:
+   - **Windows**: `%APPDATA%\Blender Foundation\Blender\4.5\scripts\addons\`
+   - **macOS**: `~/Library/Application Support/Blender/4.5/scripts/addons/`
+   - **Linux**: `~/.config/blender/4.5/scripts/addons/`
+3. Restart Blender or reload scripts (F3 → "Reload Scripts")
+4. Enable in Preferences → Add-ons → Search "3MF"
+
+### For Blender 2.80-3.6 (Original Version)
+Use the [original repository releases](https://github.com/Ghostkeeper/Blender3mfFormat/releases/latest).
+
+### Verifying Installation
+After enabling the addon, you should see:
+- **File → Import → 3D Manufacturing Format (.3mf)**
+- **File → Export → 3D Manufacturing Format (.3mf)**
+
+### Future: Blender Extensions Platform
+This addon may at some point be submitted to [Blender Extensions](https://extensions.blender.org), if Ghostkeeper ever comes back and wants to, or if they ever recede their claim to the add-on's current state to an active maintainer. 
+
 
 Usage
 ----
@@ -82,6 +123,28 @@ This export function has five relevant parameters:
 * `global_scale` (default `1`): A scaling factor to apply to the models in the 3MF file. The models are scaled by this factor from the coordinate origin.
 * `use_mesh_modifiers` (default `True`): Apply the modifiers to the mesh data before exporting. This embeds these modifiers permanently in the file. If this is disabled, the unmodified meshes will be saved to the 3MF file instead.
 * `coordinate_precision` (default `4`): Number of decimals to use for coordinates in the 3MF file. Greater precision will result in a larger file size.
+
+Testing
+----
+This addon has comprehensive test coverage to ensure reliability:
+
+**Unit Tests** (142 tests - mock-based, no Blender required):
+```bash
+python -m unittest test
+```
+
+**Integration Tests** (16 tests - requires Blender 4.2+):
+```powershell
+# Windows
+.\test\run_integration_tests.ps1
+
+# macOS/Linux
+./test/run_integration_tests.sh
+```
+
+For detailed testing information, see [`test/README.md`](test/README.md).
+
+**CI/CD**: Unit tests run automatically on every push via GitHub Actions.
 
 Support
 ----

@@ -15,6 +15,8 @@ import logging  # Reporting parsing errors.
 import os.path  # To parse target paths in relationships.
 import urllib.parse  # To parse relative target paths in relationships.
 import xml.etree.ElementTree  # To parse the relationships files.
+from typing import Dict, Set, IO
+import zipfile
 
 import bpy  # To store the annotations long-term in the Blender context.
 
@@ -43,6 +45,14 @@ ANNOTATION_FILE = (
     ".3mf_annotations"  # File name to use to store the annotations in the Blender data.
 )
 
+# IDE and Documentation support.
+__all__ = [
+    "Annotations",
+    "Relationship",
+    "ContentType",
+    "ConflictingContentType",
+]
+
 
 class Annotations:
     """
@@ -69,7 +79,7 @@ class Annotations:
         # objects.
         self.annotations = {}
 
-    def add_rels(self, rels_file):
+    def add_rels(self, rels_file: IO[bytes]) -> None:
         """
         Add relationships to this collection from a file stream containing a .rels file from a 3MF archive.
 
@@ -81,9 +91,9 @@ class Annotations:
         :param rels_file: A file stream containing a .rels file.
         """
         # Relationships are evaluated relative to the path that the _rels folder around the .rels file is on. If any.
-        base_path = os.path.dirname(rels_file.name) + "/"
+        base_path = f"{os.path.dirname(rels_file.name)}/"
         if os.path.basename(os.path.dirname(base_path)) == RELS_FOLDER:
-            base_path = os.path.dirname(os.path.dirname(base_path)) + "/"
+            base_path = f"{os.path.dirname(os.path.dirname(base_path))}/"
 
         try:
             root = xml.etree.ElementTree.ElementTree(file=rels_file)
@@ -121,7 +131,7 @@ class Annotations:
                 Relationship(namespace=namespace, source=base_path)
             )
 
-    def add_content_types(self, files_by_content_type):
+    def add_content_types(self, files_by_content_type: Dict[str, Set[IO[bytes]]]) -> None:
         """
         Add annotations that signal the content types of the files in the archive.
 
@@ -167,7 +177,7 @@ class Annotations:
                     # Adding it again wouldn't have any effect if it is the same.
                     self.annotations[filename].add(ContentType(content_type))
 
-    def write_rels(self, archive):
+    def write_rels(self, archive: zipfile.ZipFile) -> None:
         """
         Write the relationship annotations in this collections to an archive as .rels files.
 
@@ -201,8 +211,8 @@ class Annotations:
                     root,
                     f"{{{RELS_NAMESPACE}}}Relationship",
                     attrib={
-                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                        f"{{{RELS_NAMESPACE}}}Target": "/" + target,
+                        f"{{{RELS_NAMESPACE}}}Id": f"rel{current_id}",
+                        f"{{{RELS_NAMESPACE}}}Target": f"/{target}",
                         f"{{{RELS_NAMESPACE}}}Type": namespace,
                     },
                 )
@@ -214,8 +224,8 @@ class Annotations:
                     root,
                     f"{{{RELS_NAMESPACE}}}Relationship",
                     attrib={
-                        f"{{{RELS_NAMESPACE}}}Id": "rel" + str(current_id),
-                        f"{{{RELS_NAMESPACE}}}Target": "/" + MODEL_LOCATION,
+                        f"{{{RELS_NAMESPACE}}}Id": f"rel{current_id}",
+                        f"{{{RELS_NAMESPACE}}}Target": f"/{MODEL_LOCATION}",
                         f"{{{RELS_NAMESPACE}}}Type": MODEL_REL,
                     },
                 )
@@ -224,9 +234,7 @@ class Annotations:
             document = xml.etree.ElementTree.ElementTree(root)
 
             # Write that XML document to a file.
-            rels_file = (
-                source + RELS_FOLDER + "/.rels"
-            )  # _rels folder in the "source" folder.
+            rels_file = f"{source}{RELS_FOLDER}/.rels"  # _rels folder in the "source" folder.
             with archive.open(rels_file, "w") as f:
                 document.write(
                     f,
@@ -235,7 +243,7 @@ class Annotations:
                     default_namespace=RELS_NAMESPACE,
                 )
 
-    def write_content_types(self, archive):
+    def write_content_types(self, archive: zipfile.ZipFile) -> None:
         """
         Write a [Content_Types].xml file to a 3MF archive, containing all of the content types that we have assigned.
         :param archive: A zip archive to add the content types to.
@@ -293,7 +301,7 @@ class Annotations:
                         root,
                         f"{{{CONTENT_TYPES_NAMESPACE}}}Override",
                         attrib={
-                            f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": "/" + target,
+                            f"{{{CONTENT_TYPES_NAMESPACE}}}PartName": f"/{target}",
                             f"{{{CONTENT_TYPES_NAMESPACE}}}ContentType": annotation.mime_type,
                         },
                     )
@@ -308,7 +316,7 @@ class Annotations:
                 default_namespace=CONTENT_TYPES_NAMESPACE,
             )
 
-    def store(self):
+    def store(self) -> None:
         """
         Stores this `Annotations` instance in the Blender scene.
 
@@ -347,7 +355,7 @@ class Annotations:
         text_file = bpy.data.texts.new(ANNOTATION_FILE)
         text_file.write(json.dumps(document))
 
-    def retrieve(self):
+    def retrieve(self) -> None:
         """
         Retrieves any existing annotations from the Blender scene.
 
