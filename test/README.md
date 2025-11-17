@@ -1,15 +1,22 @@
-# Blender 3MF Format - Testing Guide
+# Blender 3MF Format - Legacy Unit Tests
 
-This directory contains two types of tests for the Blender 3MF addon:
+⚠️ **NOTE**: This directory contains **legacy unit tests** that use mocked Blender API. For **integration tests** using real Blender, see the `tests/` directory.
 
-## Unit Tests
+## About These Tests
 
-**What they are**: Fast, isolated tests that mock the Blender API. They test individual functions and modules without requiring Blender to be installed.
+**What they are**: Fast, isolated tests that mock the Blender API to test internal implementation details like:
+- `unit_scale()` - Unit conversion calculations  
+- `read_content_types()` - XML parsing logic
+- `write_materials()` - Material color conversion to hex
+- `format_transformation()` - Matrix formatting for 3MF
+- `parse_transformation()` - Transformation string parsing
+
+**Why they exist**: Import3MF and Export3MF are Blender operators (bpy_struct) that can't be directly instantiated for testing. These tests use mocks to test private methods and edge cases (malformed XML, invalid colors, etc.) that are hard to reproduce through the public API.
 
 **When to use**: 
-- During development to quickly verify changes
-- In CI/CD pipelines
-- To test specific functions in isolation
+- Testing low-level implementation details
+- Verifying edge cases in parsers/formatters
+- Quick iteration during algorithm development
 
 **How to run**:
 ```bash
@@ -22,13 +29,12 @@ python -m unittest test.metadata                 # Metadata tests only
 ```
 
 **Requirements**:
-- Python 3.11+ (3.10+ should work but 3.11 is tested in CI)
+- Python 3.11+
 - `mathutils` package: `pip install mathutils`
-- `pycodestyle` (optional, for style checking): `pip install pycodestyle`
 
-**Current status**: 142 tests, all passing ✅
+**Current status**: 158 legacy tests
 
-## Integration Tests
+## Integration Tests (Recommended)
 
 **What they are**: End-to-end tests that run inside a real Blender instance. They test the full import/export workflow including actual file I/O, material handling, and mesh operations.
 

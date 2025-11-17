@@ -465,8 +465,8 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 
                 # Only proceed if the most common material slot is not empty
                 if most_common_material is not None:
-                    # most_common_material_list_index is an index referring to our own list of materials that we put in the
-                    # resources.
+                    # most_common_material_list_index is an index referring to our
+                    # own list of materials that we put in the resources.
                     most_common_material_list_index = self.material_name_to_index[
                         most_common_material.name
                     ]
