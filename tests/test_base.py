@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test utilities and base classes for Blender 3MF addon tests.
 
 This file provides reusable test utilities and base classes.
@@ -52,7 +52,7 @@ def cleanup_temp_dir():
 
 class Blender3mfTestCase(unittest.TestCase):
     """Base test case for Blender 3MF addon tests with common utilities."""
-    
+
     @classmethod
     def setUpClass(cls):
         """Set up test class - register addon once for all tests."""
@@ -63,37 +63,37 @@ class Blender3mfTestCase(unittest.TestCase):
         except ValueError as e:
             if "already registered" not in str(e):
                 raise
-    
+
     def setUp(self):
         """Set up before each test - clean scene."""
         self.clean_scene()
-        
+
         # Create temp file path for this test
         import uuid
         self.temp_file = get_temp_test_dir() / f"test_{uuid.uuid4().hex[:8]}.3mf"
         self.test_resources_dir = get_test_resources_dir()
-    
+
     def tearDown(self):
         """Clean up after each test."""
         self.clean_scene()
-    
+
     def clean_scene(self):
         """Reset Blender scene to empty state."""
         # Load empty scene
         bpy.ops.wm.read_homefile(use_empty=True)
-        
+
         # Delete all objects
         if bpy.context.object and bpy.context.object.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=False)
-        
+
         # Clear orphan data
         for mesh in bpy.data.meshes:
             bpy.data.meshes.remove(mesh)
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
-    
+
     def create_red_material(self):
         """Create a red Principled BSDF material."""
         mat = bpy.data.materials.new(name="RedMaterial")
@@ -102,7 +102,7 @@ class Blender3mfTestCase(unittest.TestCase):
         if principled:
             principled.inputs["Base Color"].default_value = (1.0, 0.0, 0.0, 1.0)
         return mat
-    
+
     def create_blue_material(self):
         """Create a blue Principled BSDF material."""
         mat = bpy.data.materials.new(name="BlueMaterial")

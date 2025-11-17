@@ -1,4 +1,4 @@
-import base64  # To decode files that must be preserved.
+﻿import base64  # To decode files that must be preserved.
 import collections  # Counter, to find the most common material of an object.
 import itertools
 import logging  # To debug and log progress.
@@ -244,7 +244,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         for blender_object in blender_objects:
             for material_slot in blender_object.material_slots:
                 material = material_slot.material
-                
+
                 # Skip empty material slots
                 if material is None:
                     continue
@@ -462,7 +462,7 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 most_common_material = blender_object.material_slots[
                     most_common_material_object_index
                 ].material
-                
+
                 # Only proceed if the most common material slot is not empty
                 if most_common_material is not None:
                     # most_common_material_list_index is an index referring to our
