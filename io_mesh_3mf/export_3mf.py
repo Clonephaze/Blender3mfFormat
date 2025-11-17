@@ -244,6 +244,10 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         for blender_object in blender_objects:
             for material_slot in blender_object.material_slots:
                 material = material_slot.material
+                
+                # Skip empty material slots
+                if material is None:
+                    continue
 
                 material_name = material.name
                 if (
@@ -458,18 +462,21 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 most_common_material = blender_object.material_slots[
                     most_common_material_object_index
                 ].material
-                # most_common_material_list_index is an index referring to our own list of materials that we put in the
-                # resources.
-                most_common_material_list_index = self.material_name_to_index[
-                    most_common_material.name
-                ]
-                # We always only write one group of materials. The resource ID was determined when it was written.
-                object_element.attrib[f"{{{MODEL_NAMESPACE}}}pid"] = str(
-                    self.material_resource_id
-                )
-                object_element.attrib[f"{{{MODEL_NAMESPACE}}}pindex"] = str(
-                    most_common_material_list_index
-                )
+                
+                # Only proceed if the most common material slot is not empty
+                if most_common_material is not None:
+                    # most_common_material_list_index is an index referring to our own list of materials that we put in the
+                    # resources.
+                    most_common_material_list_index = self.material_name_to_index[
+                        most_common_material.name
+                    ]
+                    # We always only write one group of materials. The resource ID was determined when it was written.
+                    object_element.attrib[f"{{{MODEL_NAMESPACE}}}pid"] = str(
+                        self.material_resource_id
+                    )
+                    object_element.attrib[f"{{{MODEL_NAMESPACE}}}pindex"] = str(
+                        most_common_material_list_index
+                    )
 
             self.write_vertices(mesh_element, mesh.vertices)
             self.write_triangles(
@@ -608,13 +615,16 @@ class Export3MF(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             triangle_element.attrib[v3_name] = str(triangle.vertices[2])
 
             if triangle.material_index < len(material_slots):
-                # Convert to index in our global list.
-                material_index = self.material_name_to_index[
-                    material_slots[triangle.material_index].material.name
-                ]
-                if material_index != object_material_list_index:
-                    # Not equal to the index that our parent object was written with, so we must override it here.
-                    triangle_element.attrib[p1_name] = str(material_index)
+                # Check if the material slot is not empty
+                triangle_material = material_slots[triangle.material_index].material
+                if triangle_material is not None:
+                    # Convert to index in our global list.
+                    material_index = self.material_name_to_index[
+                        triangle_material.name
+                    ]
+                    if material_index != object_material_list_index:
+                        # Not equal to the index that our parent object was written with, so we must override it here.
+                        triangle_element.attrib[p1_name] = str(material_index)
 
     def format_number(self, number: float, decimals: int) -> str:
         """
